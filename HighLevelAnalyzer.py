@@ -173,7 +173,7 @@ class Hla(HighLevelAnalyzer):
 
     # An optional list of types this analyzer produces, providing a way to customize the way frames are displayed in Logic 2.
     result_types = {
-        'mytype': {
+        'tmag5170': {
             'format': \
             'MOSI:{{data.mosi}}, \
             crc_mosi_expected: {{data.mosi_crc_calculated}},\
@@ -253,7 +253,7 @@ class Hla(HighLevelAnalyzer):
             else:
                 MISO = LENGTH_ERROR_TOKEN
             if(( self.enable_time != None )and( self.disable_time != None )):
-                retVal = AnalyzerFrame('mytype', self.enable_time, self.disable_time, 
+                retVal = AnalyzerFrame('tmag5170', self.enable_time, self.disable_time, 
                                        {                                                                                \
                                             'mosi':MOSI,                                                                \
                                             'mosi_crc_calculated':hex(mosi_crc_calculated).upper().replace('X', 'x'),   \

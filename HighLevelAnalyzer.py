@@ -40,7 +40,10 @@ def uint8_to_int8 (in_value: int) -> int:
     return (int_val)
 
 def int_to_hex_string(value:int):
-    return hex(value).upper().replace('X', 'x')
+    if value == None:
+        return ""
+    else:
+        return hex(value).upper().replace('X', 'x')
 class tmga5170_frame_decoder:
     def __init__(self):
         self.__tmag5170_mapping_type = collections.namedtuple('__tmag5170_mapping_type', ['Acronym', 'DecodingFunction'])
@@ -316,9 +319,11 @@ class Hla(HighLevelAnalyzer):
         crc_mosi_correct = ""
         crc_miso_correct = ""
         read_write = ""
-        register_address = 0
+        register_address = None
         register_name = ""
         register_decoding = ""
+        mosi_crc_calculated = None
+        miso_crc_calculated = None
 
         if(frame.type == "enable"):
             print("Enable start time " + str(frame.start_time))
@@ -327,8 +332,7 @@ class Hla(HighLevelAnalyzer):
             print("Disable stop time " + str(frame.end_time))
             self.disable_time = frame.start_time
             print(str(self.frame_data_MOSI))
-            mosi_crc_calculated = 0
-            miso_crc_calculated = 0
+
             if(len(self.frame_data_MOSI) == TMAG5170_SINGLE_FRAME_BYTE_SIZE):
                 MOSI  = "0x"
                 mosi_value = self.decoder.convert_tmag5170_bytes_to_int(self.frame_data_MOSI, 0)

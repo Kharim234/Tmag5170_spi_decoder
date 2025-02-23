@@ -7,56 +7,87 @@ import collections
 CRC_OK_TOKEN = "CRC_OK"
 CRC_ERROR_TOKEN = "CRC_ERROR"
 LENGTH_ERROR_TOKEN = "Length error"
+WRITE_REGISTER_TOKEN = "write"
+READ_REGISTER_TOKEN = "read"
 
 READ_WRITE_BIT_POSITION = 31
 REGISTER_ADDR_POSITION = 24
+TMAG5170_16_BIT_SPI_DATA_POSITION = 8
 
 REGISTER_ADDR_MASK = 0x7F
+TMAG5170_16_BIT_SPI_DATA_MASK = 0xFFFF
+
 
 TMAG5170_SINGLE_FRAME_BYTE_SIZE = 4
 
+def CONV_STATUS_DecodingFunction(data: int):
+    return "Not yet implemented"
 
+def X_CH_RESULT_DecodingFunction(data: int):
+    return f"X_CH_RESULT: {data}"
 
-def dummyDecodingFunction(data):
+def Y_CH_RESULT_DecodingFunction(data: int):
+    return f"Y_CH_RESULT: {data}"
+
+def Z_CH_RESULT_DecodingFunction(data: int):
+    return f"Z_CH_RESULT: {data}"
+
+def TEMP_RESULT_DecodingFunction(data: int):
+    return f"TEMP_RESULT: {data}"
+
+def AFE_STATUS_DecodingFunction(data: int):
+    return "Not yet implemented"
+
+def SYS_STATUS_DecodingFunction(data: int):
+    return "Not yet implemented"
+
+def ANGLE_RESULT_DecodingFunction(data: int):
+    return f"ANGLE_RESULT: {data}"
+
+def TEST_CONFIG_DecodingFunction(data: int):
+    return "Not yet implemented"
+
+def dummyDecodingFunction(data: int):
     return "Not yet implemented"
 tmag5170_mapping_type = collections.namedtuple('tmag5170_mapping_type', ['Acronym', 'DecodingFunction'])
-tmag5170_mapping_type("DEVICE_CONFIG", dummyDecodingFunction)
 
 Tmag5170_register_mapping = {
-    0x00: tmag5170_mapping_type("DEVICE_CONFIG"    ,    dummyDecodingFunction)     ,
-    0x01: tmag5170_mapping_type("SENSOR_CONFIG"    ,    dummyDecodingFunction)     ,
-    0x02: tmag5170_mapping_type("SYSTEM_CONFIG"    ,    dummyDecodingFunction)     ,
-    0x03: tmag5170_mapping_type("ALERT_CONFIG"     ,    dummyDecodingFunction)     ,
-    0x04: tmag5170_mapping_type("X_THRX_CONFIG"    ,    dummyDecodingFunction)     ,
-    0x05: tmag5170_mapping_type("Y_THRX_CONFIG"    ,    dummyDecodingFunction)     ,
-    0x06: tmag5170_mapping_type("Z_THRX_CONFIG"    ,    dummyDecodingFunction)     ,
-    0x07: tmag5170_mapping_type("T_THRX_CONFIG"    ,    dummyDecodingFunction)     ,
-    0x08: tmag5170_mapping_type("CONV_STATUS"      ,    dummyDecodingFunction)     ,
-    0x09: tmag5170_mapping_type("X_CH_RESULT"      ,    dummyDecodingFunction)     ,
-    0x0A: tmag5170_mapping_type("Y_CH_RESULT"      ,    dummyDecodingFunction)     ,
-    0x0B: tmag5170_mapping_type("Z_CH_RESULT"      ,    dummyDecodingFunction)     ,
-    0x0C: tmag5170_mapping_type("TEMP_RESULT"      ,    dummyDecodingFunction)     ,
-    0x0D: tmag5170_mapping_type("AFE_STATUS"       ,    dummyDecodingFunction)     ,
-    0x0E: tmag5170_mapping_type("SYS_STATUS"       ,    dummyDecodingFunction)     ,
-    0x0F: tmag5170_mapping_type("TEST_CONFIG"      ,    dummyDecodingFunction)     ,
-    0x10: tmag5170_mapping_type("OSC_MONITOR"      ,    dummyDecodingFunction)     ,
-    0x11: tmag5170_mapping_type("MAG_GAIN_CONFIG"  ,    dummyDecodingFunction)     ,
-    0x12: tmag5170_mapping_type("MAG_OFFSET_CONFIG",    dummyDecodingFunction)     ,
-    0x13: tmag5170_mapping_type("ANGLE_RESULT"     ,    dummyDecodingFunction)     ,
+    0x00: tmag5170_mapping_type("DEVICE_CONFIG"    ,    dummyDecodingFunction)              ,
+    0x01: tmag5170_mapping_type("SENSOR_CONFIG"    ,    dummyDecodingFunction)              ,
+    0x02: tmag5170_mapping_type("SYSTEM_CONFIG"    ,    dummyDecodingFunction)              ,
+    0x03: tmag5170_mapping_type("ALERT_CONFIG"     ,    dummyDecodingFunction)              ,
+    0x04: tmag5170_mapping_type("X_THRX_CONFIG"    ,    dummyDecodingFunction)              ,
+    0x05: tmag5170_mapping_type("Y_THRX_CONFIG"    ,    dummyDecodingFunction)              ,
+    0x06: tmag5170_mapping_type("Z_THRX_CONFIG"    ,    dummyDecodingFunction)              ,
+    0x07: tmag5170_mapping_type("T_THRX_CONFIG"    ,    dummyDecodingFunction)              ,
+    0x08: tmag5170_mapping_type("CONV_STATUS"      ,    CONV_STATUS_DecodingFunction)       ,
+    0x09: tmag5170_mapping_type("X_CH_RESULT"      ,    X_CH_RESULT_DecodingFunction)       ,
+    0x0A: tmag5170_mapping_type("Y_CH_RESULT"      ,    Y_CH_RESULT_DecodingFunction)       ,
+    0x0B: tmag5170_mapping_type("Z_CH_RESULT"      ,    Z_CH_RESULT_DecodingFunction)       ,
+    0x0C: tmag5170_mapping_type("TEMP_RESULT"      ,    TEMP_RESULT_DecodingFunction)       ,
+    0x0D: tmag5170_mapping_type("AFE_STATUS"       ,    AFE_STATUS_DecodingFunction)        ,
+    0x0E: tmag5170_mapping_type("SYS_STATUS"       ,    SYS_STATUS_DecodingFunction)        ,
+    0x0F: tmag5170_mapping_type("TEST_CONFIG"      ,    TEST_CONFIG_DecodingFunction)       ,
+    0x10: tmag5170_mapping_type("OSC_MONITOR"      ,    dummyDecodingFunction)              ,
+    0x11: tmag5170_mapping_type("MAG_GAIN_CONFIG"  ,    dummyDecodingFunction)              ,
+    0x12: tmag5170_mapping_type("MAG_OFFSET_CONFIG",    dummyDecodingFunction)              ,
+    0x13: tmag5170_mapping_type("ANGLE_RESULT"     ,    ANGLE_RESULT_DecodingFunction)      ,
     0x14: tmag5170_mapping_type("MAGNITUDE_RESULT" ,    dummyDecodingFunction)     
 }
 
+def get_16_bit_spi_data_tmag5170 (value: int) -> int:
+    return get_masked_value(value, TMAG5170_16_BIT_SPI_DATA_POSITION, TMAG5170_16_BIT_SPI_DATA_MASK)
 
-def get_masked_value (value, position, mask):
+def get_masked_value (value: int, position: int, mask: int) -> int:
     return ((value  >> position)& mask) 
 
-def get_bit (value, i):
+def get_bit (value: int, i: int) -> int:
     return (value >> i) & 0x01
 
-def set_bit (bit_val, position):
+def set_bit (bit_val: int, position: int) -> int:
     return (bit_val << position)
 
-def convert_tmag5170_bytes_to_int (data, start_position):
+def convert_tmag5170_bytes_to_int (data, start_position: int) -> int:
     value = None
     length = len(data)
     if ((length - start_position) >= TMAG5170_SINGLE_FRAME_BYTE_SIZE):
@@ -67,10 +98,10 @@ def convert_tmag5170_bytes_to_int (data, start_position):
         print("data_sliced")
         print(data_sliced)
         data_joined = b''.join(data_sliced)
-        value = int.from_bytes(data_joined, 'big') 
+        value = int.from_bytes(data_joined, 'big', signed = False) 
     return value
 
-def calculate_tmag5170_crc (data):
+def calculate_tmag5170_crc (data: int):
     crc_calculated = None
     crc_from_bus = None
     if (data != None):
@@ -98,6 +129,9 @@ class Hla(HighLevelAnalyzer):
 
     #Disabling crc is lifting FRAME_STAT check due to lack of data how frames looks in this type I am not implementing this feature
     CRC_DIS = ChoicesSetting(choices=("0h = CRC enabled in SPI communication",))
+
+    #Disabling crc is lifting FRAME_STAT check due to lack of data how frames looks in this type I am not implementing this feature
+    CONV_AVG = ChoicesSetting(choices=("CONV_AVG != 0h, Note: X, Y, Z ch result is represented as 16 bits INT", "0h = 1x - 10.0Ksps (3-axes) or 20Ksps (1 axis), Note: X, Y, Z ch result is represented as 12 bits INT", ))
     enable_time = None
     disable_time = None
     frame_data_MISO = []
@@ -140,6 +174,7 @@ class Hla(HighLevelAnalyzer):
         read_write = ""
         register_address = 0
         register_name = ""
+        register_decoding = ""
 
         if(frame.type == "enable"):
             print("Enable start time " + str(frame.start_time))
@@ -163,9 +198,11 @@ class Hla(HighLevelAnalyzer):
                     crc_mosi_correct = CRC_ERROR_TOKEN
 
                 if get_bit(mosi_value, READ_WRITE_BIT_POSITION) == 1:
-                    read_write = "read"
+                    read_write = READ_REGISTER_TOKEN
                 else:
-                    read_write = "write"
+                    read_write = WRITE_REGISTER_TOKEN
+                    tmag5170_16_bit_spi_data = get_16_bit_spi_data_tmag5170(mosi_value)
+                    register_decoding = Tmag5170_register_mapping[register_address].DecodingFunction(tmag5170_16_bit_spi_data)
 
                 for i in self.frame_data_MOSI:
                     MOSI += (i.hex()).upper()
@@ -180,6 +217,11 @@ class Hla(HighLevelAnalyzer):
                     crc_miso_correct = CRC_OK_TOKEN
                 else:
                     crc_miso_correct = CRC_ERROR_TOKEN
+
+                if read_write == READ_REGISTER_TOKEN:
+                    tmag5170_16_bit_spi_data = get_16_bit_spi_data_tmag5170(miso_value)
+                    register_decoding = Tmag5170_register_mapping[register_address].DecodingFunction(tmag5170_16_bit_spi_data)
+                
                 for i in self.frame_data_MISO:
                     MISO += (i.hex()).upper()
             else:
@@ -193,7 +235,7 @@ class Hla(HighLevelAnalyzer):
                                             'miso_crc_calculated':hex(miso_crc_calculated).upper().replace('X', 'x'),   \
                                             'crc_miso_correct':crc_miso_correct,                                        \
                                             'crc_mosi_correct':crc_mosi_correct,                                        \
-                                            'register_decoding':"not_yet_implemented",                                  \
+                                            'register_decoding':register_decoding,                                      \
                                             'read_write':read_write,                                                    \
                                             'register_address':hex(register_address).upper().replace('X', 'x'),         \
                                             'register_name':register_name,                                              \

@@ -34,6 +34,13 @@ def uint16_to_int16 (in_value: int) -> int:
     int_val = int.from_bytes(value, 'big', signed = True)
     return (int_val)
 
+def uint8_to_int8 (in_value: int) -> int:
+    value = in_value.to_bytes(1, 'big')
+    int_val = int.from_bytes(value, 'big', signed = True)
+    return (int_val)
+
+def int_to_hex_string(value:int):
+    return hex(value).upper().replace('X', 'x')
 class tmga5170_frame_decoder:
     def __init__(self):
         self.__tmag5170_mapping_type = collections.namedtuple('__tmag5170_mapping_type', ['Acronym', 'DecodingFunction'])
@@ -42,10 +49,10 @@ class tmga5170_frame_decoder:
             0x01: self.__tmag5170_mapping_type("SENSOR_CONFIG"    ,    self.__dummyDecodingFunction)              ,
             0x02: self.__tmag5170_mapping_type("SYSTEM_CONFIG"    ,    self.__dummyDecodingFunction)              ,
             0x03: self.__tmag5170_mapping_type("ALERT_CONFIG"     ,    self.__dummyDecodingFunction)              ,
-            0x04: self.__tmag5170_mapping_type("X_THRX_CONFIG"    ,    self.__dummyDecodingFunction)              ,
-            0x05: self.__tmag5170_mapping_type("Y_THRX_CONFIG"    ,    self.__dummyDecodingFunction)              ,
-            0x06: self.__tmag5170_mapping_type("Z_THRX_CONFIG"    ,    self.__dummyDecodingFunction)              ,
-            0x07: self.__tmag5170_mapping_type("T_THRX_CONFIG"    ,    self.__dummyDecodingFunction)              ,
+            0x04: self.__tmag5170_mapping_type("X_THRX_CONFIG"    ,    self.__X_THRX_CONFIG_DecodingFunction)     ,
+            0x05: self.__tmag5170_mapping_type("Y_THRX_CONFIG"    ,    self.__Y_THRX_CONFIG_DecodingFunction)     ,
+            0x06: self.__tmag5170_mapping_type("Z_THRX_CONFIG"    ,    self.__Z_THRX_CONFIG_DecodingFunction)     ,
+            0x07: self.__tmag5170_mapping_type("T_THRX_CONFIG"    ,    self.__T_THRX_CONFIG_DecodingFunction)     ,
             0x08: self.__tmag5170_mapping_type("CONV_STATUS"      ,    self.__CONV_STATUS_DecodingFunction)       ,
             0x09: self.__tmag5170_mapping_type("X_CH_RESULT"      ,    self.__X_CH_RESULT_DecodingFunction)       ,
             0x0A: self.__tmag5170_mapping_type("Y_CH_RESULT"      ,    self.__Y_CH_RESULT_DecodingFunction)       ,
@@ -54,15 +61,56 @@ class tmga5170_frame_decoder:
             0x0D: self.__tmag5170_mapping_type("AFE_STATUS"       ,    self.__AFE_STATUS_DecodingFunction)        ,
             0x0E: self.__tmag5170_mapping_type("SYS_STATUS"       ,    self.__SYS_STATUS_DecodingFunction)        ,
             0x0F: self.__tmag5170_mapping_type("TEST_CONFIG"      ,    self.__TEST_CONFIG_DecodingFunction)       ,
-            0x10: self.__tmag5170_mapping_type("OSC_MONITOR"      ,    self.__dummyDecodingFunction)              ,
+            0x10: self.__tmag5170_mapping_type("OSC_MONITOR"      ,    self.__OSC_MONITOR_DecodingFunction)       ,
             0x11: self.__tmag5170_mapping_type("MAG_GAIN_CONFIG"  ,    self.__dummyDecodingFunction)              ,
             0x12: self.__tmag5170_mapping_type("MAG_OFFSET_CONFIG",    self.__dummyDecodingFunction)              ,
             0x13: self.__tmag5170_mapping_type("ANGLE_RESULT"     ,    self.__ANGLE_RESULT_DecodingFunction)      ,
-            0x14: self.__tmag5170_mapping_type("MAGNITUDE_RESULT" ,    self.__dummyDecodingFunction)     
+            0x14: self.__tmag5170_mapping_type("MAGNITUDE_RESULT" ,    self.__MAGNITUDE_RESULT_DecodingFunction)     
         }
 
     def __CONV_STATUS_DecodingFunction(self, data: int):
-        return "Not yet implemented"
+        RESERVED_15_14  = get_masked_value(data, 14,    0x0003)
+        RDY_13          = get_masked_value(data, 13,    0x0001)
+        A_12            = get_masked_value(data, 12,    0x0001)
+        T_11            = get_masked_value(data, 11,    0x0001)
+        Z_10            = get_masked_value(data, 10,    0x0001)
+        Y_9             = get_masked_value(data, 9,     0x0001)
+        X_8             = get_masked_value(data, 8,     0x0001)
+        RESERVED_7      = get_masked_value(data, 7,     0x0001)
+        SET_COUNT_6_4   = get_masked_value(data, 4,     0x0007)
+        RESERVED_3_2    = get_masked_value(data, 2,     0x0003)
+        ALRT_STATUS_1_0 = get_masked_value(data, 0,     0x0003)
+        return    f"[15-14] RESERVED: {int_to_hex_string(RESERVED_15_14)}, \
+                    [13] RDY: {int_to_hex_string(RDY_13)}, \
+                    [12] A: {int_to_hex_string(A_12)}, \
+                    [11] T: {int_to_hex_string(T_11)}, \
+                    [10] Z: {int_to_hex_string(Z_10)}, \
+                    [9] Y: {int_to_hex_string(Y_9)}, \
+                    [8] X: {int_to_hex_string(X_8)}, \
+                    [7] RESERVED: {int_to_hex_string(RESERVED_7)}, \
+                    [6-4] SET_COUNT: {int_to_hex_string(SET_COUNT_6_4)}, \
+                    [3-2] RESERVED: {int_to_hex_string(RESERVED_3_2)}, \
+                    [1-0] ALRT_STATUS: {int_to_hex_string(ALRT_STATUS_1_0)}"
+
+    def __X_THRX_CONFIG_DecodingFunction(self, data: int):
+        X_HI_THRESHOLD_15_8 = uint8_to_int8(get_masked_value(data, 8, 0xFF))
+        X_LO_THRESHOLD_7_0  = uint8_to_int8(get_masked_value(data, 0, 0xFF))
+        return f"[15-8] X_HI_THRESHOLD: {X_HI_THRESHOLD_15_8}, [7-0] X_LO_THRESHOLD: {X_LO_THRESHOLD_7_0}"
+    
+    def __Y_THRX_CONFIG_DecodingFunction(self, data: int):
+        Y_HI_THRESHOLD_15_8 = uint8_to_int8(get_masked_value(data, 8, 0xFF))
+        Y_LO_THRESHOLD_7_0  = uint8_to_int8(get_masked_value(data, 0, 0xFF))
+        return f"[15-8] Y_HI_THRESHOLD: {Y_HI_THRESHOLD_15_8}, [7-0] Y_LO_THRESHOLD: {Y_LO_THRESHOLD_7_0}"
+    
+    def __Z_THRX_CONFIG_DecodingFunction(self, data: int):
+        Z_HI_THRESHOLD_15_8 = uint8_to_int8(get_masked_value(data, 8, 0xFF))
+        Z_LO_THRESHOLD_7_0  = uint8_to_int8(get_masked_value(data, 0, 0xFF))
+        return f"[15-8] Z_HI_THRESHOLD: {Z_HI_THRESHOLD_15_8}, [7-0] Z_LO_THRESHOLD: {Z_LO_THRESHOLD_7_0}"
+    
+    def __T_THRX_CONFIG_DecodingFunction(self, data: int):
+        T_HI_THRESHOLD_15_8 = uint8_to_int8(get_masked_value(data, 8, 0xFF))
+        T_LO_THRESHOLD_7_0  = uint8_to_int8(get_masked_value(data, 0, 0xFF))
+        return f"[15-8] T_HI_THRESHOLD: {T_HI_THRESHOLD_15_8}, [7-0] T_LO_THRESHOLD: {T_LO_THRESHOLD_7_0}"
 
     def __X_CH_RESULT_DecodingFunction(self, data: int):
         int_val = uint16_to_int16(data)
@@ -80,17 +128,76 @@ class tmga5170_frame_decoder:
         return f"[15-0] TEMP_RESULT: {data}"
 
     def __AFE_STATUS_DecodingFunction(self, data: int):
-        return "Not yet implemented"
+        CFG_RESET_15    = get_masked_value(data, 15,    0x0001)
+        RESERVED_14_13  = get_masked_value(data, 13,    0x0003)
+        SENS_STAT_12    = get_masked_value(data, 12,    0x0001)
+        TEMP_STAT_11    = get_masked_value(data, 11,    0x0001)
+        ZHS_STAT_10     = get_masked_value(data, 10,    0x0001)
+        YHS_STAT_9      = get_masked_value(data, 9,     0x0001)
+        XHS_STAT_8      = get_masked_value(data, 8,     0x0001)
+        RESERVED_7_2    = get_masked_value(data, 7,     0x003F)
+        TRIM_STAT_1     = get_masked_value(data, 1,     0x0001)
+        LDO_STAT_0      = get_masked_value(data, 0,     0x0001)
+        return    f"[15] CFG_RESET: {int_to_hex_string(CFG_RESET_15)}, \
+                    [14-13] RESERVED: {int_to_hex_string(RESERVED_14_13)}, \
+                    [12] SENS_STAT: {int_to_hex_string(SENS_STAT_12)}, \
+                    [11] TEMP_STAT: {int_to_hex_string(TEMP_STAT_11)}, \
+                    [10] ZHS_STAT: {int_to_hex_string(ZHS_STAT_10)}, \
+                    [9] YHS_STAT: {int_to_hex_string(YHS_STAT_9)}, \
+                    [8] XHS_STAT: {int_to_hex_string(XHS_STAT_8)}, \
+                    [7-2] RESERVED: {int_to_hex_string(RESERVED_7_2)}, \
+                    [1] TRIM_STAT: {int_to_hex_string(TRIM_STAT_1)}, \
+                    [0] LDO_STAT: {int_to_hex_string(LDO_STAT_0)}"
 
     def __SYS_STATUS_DecodingFunction(self, data: int):
-        return "Not yet implemented"
+        ALRT_LVL_15             = get_masked_value(data, 15,    0x0001)
+        ALRT_DRV_14             = get_masked_value(data, 14,    0x0001)
+        SDO_DRV_13              = get_masked_value(data, 13,    0x0001)
+        CRC_STAT_12             = get_masked_value(data, 12,    0x0001)
+        FRAME_STAT_11           = get_masked_value(data, 11,    0x0001)
+        OPERATING_STAT_10_8     = get_masked_value(data, 8,     0x0007)
+        RESERVED_7_6            = get_masked_value(data, 6,     0x0003)
+        VCC_OV_5                = get_masked_value(data, 5,     0x0001)
+        VCC_UV_4                = get_masked_value(data, 4,     0x0001)
+        TEMP_THX_3              = get_masked_value(data, 3,     0x0001)
+        ZCH_THX_2               = get_masked_value(data, 2,     0x0001)
+        YCH_THX_1               = get_masked_value(data, 1,     0x0001)
+        XCH_THX_0               = get_masked_value(data, 0,     0x0001)
+        return    f"[15] ALRT_LVL: {int_to_hex_string(ALRT_LVL_15)}, \
+                    [14] ALRT_DRV: {int_to_hex_string(ALRT_DRV_14)}, \
+                    [13] SDO_DRV: {int_to_hex_string(SDO_DRV_13)}, \
+                    [12] CRC_STAT: {int_to_hex_string(CRC_STAT_12)}, \
+                    [11] FRAME_STAT: {int_to_hex_string(FRAME_STAT_11)}, \
+                    [10-8] OPERATING_STAT: {int_to_hex_string(OPERATING_STAT_10_8)}, \
+                    [7-6] RESERVED: {int_to_hex_string(RESERVED_7_6)}, \
+                    [5] VCC_OV: {int_to_hex_string(VCC_OV_5)}, \
+                    [4] VCC_UV: {int_to_hex_string(VCC_UV_4)}, \
+                    [3] TEMP_THX: {int_to_hex_string(TEMP_THX_3)}, \
+                    [2] ZCH_THX: {int_to_hex_string(ZCH_THX_2)}, \
+                    [1] YCH_THX: {int_to_hex_string(YCH_THX_1)}, \
+                    [0] XCH_THX: {int_to_hex_string(XCH_THX_0)}"
 
     def __ANGLE_RESULT_DecodingFunction(self, data: int):
         return f"[15-0] ANGLE_RESULT: {data}"
 
 
     def __TEST_CONFIG_DecodingFunction(self, data: int):
-        return "Not yet implemented"
+        RESERVED_15_6   = get_masked_value(data, 6, 0x03FF)
+        VER_5_4         = get_masked_value(data, 4, 0x0003)
+        RESERVED_3      = get_masked_value(data, 3, 0x0001)
+        CRC_DIS_2       = get_masked_value(data, 2, 0x0001)
+        OSC_CNT_CTL_1_0 = get_masked_value(data, 0, 0x0003)
+        return    f"[15-6] RESERVED: {int_to_hex_string(RESERVED_15_6)}, \
+                    [5-4] VER: {int_to_hex_string(VER_5_4)}, \
+                    [3] RESERVED: {int_to_hex_string(RESERVED_3)}, \
+                    [2] CRC_DIS: {int_to_hex_string(CRC_DIS_2)}, \
+                    [1-0] OSC_CNT_CTL: {int_to_hex_string(OSC_CNT_CTL_1_0)}"
+    
+    def __OSC_MONITOR_DecodingFunction(self, data: int):
+        return f"[15-0] OSC_COUNT: {data}"
+
+    def __MAGNITUDE_RESULT_DecodingFunction(self, data: int):
+        return f"[15-0] MAGNITUDE_RESULT: {data}"
 
     def __dummyDecodingFunction(self, data: int):
         return "Not yet implemented"
@@ -256,15 +363,15 @@ class Hla(HighLevelAnalyzer):
                 retVal = AnalyzerFrame('tmag5170', self.enable_time, self.disable_time, 
                                        {                                                                                \
                                             'mosi':MOSI,                                                                \
-                                            'mosi_crc_calculated':hex(mosi_crc_calculated).upper().replace('X', 'x'),   \
+                                            'mosi_crc_calculated':int_to_hex_string(mosi_crc_calculated),               \
                                             'miso':MISO,                                                                \
-                                            'miso_crc_calculated':hex(miso_crc_calculated).upper().replace('X', 'x'),   \
+                                            'miso_crc_calculated':int_to_hex_string(miso_crc_calculated),               \
                                             'crc_miso_correct':crc_miso_correct,                                        \
                                             'crc_mosi_correct':crc_mosi_correct,                                        \
-                                            'register_decoding':register_decoding,                                      \
                                             'read_write':read_write,                                                    \
-                                            'register_address':hex(register_address).upper().replace('X', 'x'),         \
+                                            'register_address':int_to_hex_string(register_address),                     \
                                             'register_name':register_name,                                              \
+                                            'register_decoding':register_decoding,                                      \
                                         })
             self.disable_time = None
             self.enable_time = None

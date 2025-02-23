@@ -182,7 +182,8 @@ class Hla(HighLevelAnalyzer):
             RegAddr:{{data.register_address}} - {{data.register_name}}, \
             \nMISO:{{data.miso}}, \
             crc_miso_expected: {{data.miso_crc_calculated}},\
-            {{data.crc_miso_correct}}'
+            {{data.crc_miso_correct}},\
+            decoded_reg_val:{{data.register_decoding}}'
         }
     }
     

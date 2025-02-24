@@ -29,6 +29,9 @@ def get_bit (value: int, i: int) -> int:
 def set_bit (bit_val: int, position: int) -> int:
     return (bit_val << position)
 
+def set_bit_in_value (bit_val: int, position: int, value: int) -> int:
+    return (set_bit(bit_val, position) | value)
+
 def uint16_to_int16 (in_value: int) -> int:
     value = in_value.to_bytes(2, 'big')
     int_val = int.from_bytes(value, 'big', signed = True)
@@ -37,6 +40,17 @@ def uint16_to_int16 (in_value: int) -> int:
 def uint8_to_int8 (in_value: int) -> int:
     value = in_value.to_bytes(1, 'big')
     int_val = int.from_bytes(value, 'big', signed = True)
+    return (int_val)
+
+def uintX_to_intX_represented_on_8_bits (in_value: int, size_of_in_value: int) -> int:
+    int_val = None
+    if size_of_in_value <= 8 and size_of_in_value>0:
+        value = in_value
+        sign_bit = get_bit(in_value, size_of_in_value - 1)
+        for i in range((size_of_in_value),8):
+            value = set_bit_in_value(sign_bit, i, value)
+        byte_value = value.to_bytes(1, 'big')
+        int_val = int.from_bytes(byte_value, 'big', signed = True)
     return (int_val)
 
 def int_to_hex_string(value:int):
@@ -48,10 +62,10 @@ class tmga5170_frame_decoder:
     def __init__(self):
         self.__tmag5170_mapping_type = collections.namedtuple('__tmag5170_mapping_type', ['Acronym', 'DecodingFunction'])
         self.__Tmag5170_register_mapping = {
-            0x00: self.__tmag5170_mapping_type("DEVICE_CONFIG"    ,    self.__dummyDecodingFunction)              ,
-            0x01: self.__tmag5170_mapping_type("SENSOR_CONFIG"    ,    self.__dummyDecodingFunction)              ,
-            0x02: self.__tmag5170_mapping_type("SYSTEM_CONFIG"    ,    self.__dummyDecodingFunction)              ,
-            0x03: self.__tmag5170_mapping_type("ALERT_CONFIG"     ,    self.__dummyDecodingFunction)              ,
+            0x00: self.__tmag5170_mapping_type("DEVICE_CONFIG"    ,    self.__DEVICE_CONFIG_DecodingFunction)     ,
+            0x01: self.__tmag5170_mapping_type("SENSOR_CONFIG"    ,    self.__SENSOR_CONFIG_DecodingFunction)     ,
+            0x02: self.__tmag5170_mapping_type("SYSTEM_CONFIG"    ,    self.__SYSTEM_CONFIG_DecodingFunction)     ,
+            0x03: self.__tmag5170_mapping_type("ALERT_CONFIG"     ,    self.__ALERT_CONFIG_DecodingFunction)      ,
             0x04: self.__tmag5170_mapping_type("X_THRX_CONFIG"    ,    self.__X_THRX_CONFIG_DecodingFunction)     ,
             0x05: self.__tmag5170_mapping_type("Y_THRX_CONFIG"    ,    self.__Y_THRX_CONFIG_DecodingFunction)     ,
             0x06: self.__tmag5170_mapping_type("Z_THRX_CONFIG"    ,    self.__Z_THRX_CONFIG_DecodingFunction)     ,
@@ -65,11 +79,112 @@ class tmga5170_frame_decoder:
             0x0E: self.__tmag5170_mapping_type("SYS_STATUS"       ,    self.__SYS_STATUS_DecodingFunction)        ,
             0x0F: self.__tmag5170_mapping_type("TEST_CONFIG"      ,    self.__TEST_CONFIG_DecodingFunction)       ,
             0x10: self.__tmag5170_mapping_type("OSC_MONITOR"      ,    self.__OSC_MONITOR_DecodingFunction)       ,
-            0x11: self.__tmag5170_mapping_type("MAG_GAIN_CONFIG"  ,    self.__dummyDecodingFunction)              ,
-            0x12: self.__tmag5170_mapping_type("MAG_OFFSET_CONFIG",    self.__dummyDecodingFunction)              ,
+            0x11: self.__tmag5170_mapping_type("MAG_GAIN_CONFIG"  ,    self.__MAG_GAIN_CONFIG_DecodingFunction)   ,
+            0x12: self.__tmag5170_mapping_type("MAG_OFFSET_CONFIG",    self.__MAG_OFFSET_CONFIG_DecodingFunction) ,
             0x13: self.__tmag5170_mapping_type("ANGLE_RESULT"     ,    self.__ANGLE_RESULT_DecodingFunction)      ,
             0x14: self.__tmag5170_mapping_type("MAGNITUDE_RESULT" ,    self.__MAGNITUDE_RESULT_DecodingFunction)     
         }
+
+
+    def __MAG_OFFSET_CONFIG_DecodingFunction(self, data: int):
+        OFFSET_SELECTION_15_14 = get_masked_value(data, 14,    0x0003)
+        OFFSET_VALUE1__13_7    = get_masked_value(data, 7,    0x007F)
+        OFFSET_VALUE2__6_0     = get_masked_value(data, 0,    0x007F)
+        return    f"[15-14] OFFSET_SELECTION: {int_to_hex_string(OFFSET_SELECTION_15_14)}, \
+                    [13-7] OFFSET_VALUE1: {uintX_to_intX_represented_on_8_bits(OFFSET_VALUE1__13_7, 7)}, \
+                    [6-0] OFFSET_VALUE2: {uintX_to_intX_represented_on_8_bits(OFFSET_VALUE2__6_0, 7)}"
+
+    def __MAG_GAIN_CONFIG_DecodingFunction(self, data: int):
+        GAIN_SELECTION_15_14 = get_masked_value(data, 14,    0x0003)
+        RESERVED_13_11       = get_masked_value(data, 11,    0x0007)
+        GAIN_VALUE_10_0      = get_masked_value(data, 10,    0x07FF)
+        return    f"[15-14] GAIN_SELECTION: {int_to_hex_string(GAIN_SELECTION_15_14)}, \
+                    [13-11] RESERVED: {int_to_hex_string(RESERVED_13_11)}, \
+                    [10-0] GAIN_VALUE: {int_to_hex_string(GAIN_VALUE_10_0)}"
+
+    def __ALERT_CONFIG_DecodingFunction(self, data: int):
+        RESERVED_15_14      = get_masked_value(data, 14,    0x0003)
+        ALERT_LATCH_13      = get_masked_value(data, 13,    0x0001)
+        ALERT_MODE_12       = get_masked_value(data, 12,    0x0001)
+        STATUS_ALRT_11      = get_masked_value(data, 11,    0x0001)
+        RESERVED_10_9       = get_masked_value(data, 9,     0x0003)
+        RSLT_ALRT_8         = get_masked_value(data, 8,     0x0001)
+        RESERVED_7_6        = get_masked_value(data, 6,     0x0003)
+        THRX_COUNT_5_4      = get_masked_value(data, 4,     0x0003)
+        T_THRX_ALRT_3       = get_masked_value(data, 3,     0x0001)
+        Z_THRX_ALRT_2       = get_masked_value(data, 2,     0x0001)
+        Y_THRX_ALRT_1       = get_masked_value(data, 1,     0x0001)
+        X_THRX_ALRT_0       = get_masked_value(data, 0,     0x0001)
+        return    f"[15-14] RESERVED: {int_to_hex_string(RESERVED_15_14)}, \
+                    [13] ALERT_LATCH: {int_to_hex_string(ALERT_LATCH_13)}, \
+                    [12] ALERT_MODE: {int_to_hex_string(ALERT_MODE_12)}, \
+                    [11] STATUS_ALRT: {int_to_hex_string(STATUS_ALRT_11)}, \
+                    [10-9] RESERVED: {int_to_hex_string(RESERVED_10_9)}, \
+                    [8] RSLT_ALRT: {int_to_hex_string(RSLT_ALRT_8)}, \
+                    [7-6] RESERVED: {int_to_hex_string(RESERVED_7_6)}, \
+                    [5-4] THRX_COUNT: {int_to_hex_string(THRX_COUNT_5_4)}, \
+                    [3] T_THRX_ALRT: {int_to_hex_string(T_THRX_ALRT_3)}, \
+                    [2] Z_THRX_ALRT: {int_to_hex_string(Z_THRX_ALRT_2)}, \
+                    [1] Y_THRX_ALRT: {int_to_hex_string(Y_THRX_ALRT_1)}, \
+                    [0] X_THRX_ALRT: {int_to_hex_string(X_THRX_ALRT_0)}"
+
+    def __SYSTEM_CONFIG_DecodingFunction(self, data: int):
+        RESERVED_15_14      = get_masked_value(data, 14,    0x0003)
+        DIAG_SEL_13_12      = get_masked_value(data, 12,    0x0003)
+        RESERVED_11         = get_masked_value(data, 11,    0x0001)
+        TRIGGER_MODE_10_9   = get_masked_value(data, 9,     0x0003)
+        DATA_TYPE_8_6       = get_masked_value(data, 6,     0x0007)
+        DIAG_EN_5           = get_masked_value(data, 5,     0x0001)
+        RESERVED_4_3        = get_masked_value(data, 3,     0x0003)
+        Z_HLT_EN_2          = get_masked_value(data, 2,     0x0001)
+        Y_HLT_EN_1          = get_masked_value(data, 1,     0x0001)
+        X_HLT_EN_0          = get_masked_value(data, 0,     0x0001)
+        return    f"[15-14] RESERVED: {int_to_hex_string(RESERVED_15_14)}, \
+                    [13-12] DIAG_SEL: {int_to_hex_string(DIAG_SEL_13_12)}, \
+                    [11] RESERVED: {int_to_hex_string(RESERVED_11)}, \
+                    [10-9] TRIGGER_MODE: {int_to_hex_string(TRIGGER_MODE_10_9)}, \
+                    [8-6] DATA_TYPE: {int_to_hex_string(DATA_TYPE_8_6)}, \
+                    [5] DIAG_EN: {int_to_hex_string(DIAG_EN_5)}, \
+                    [4-3] RESERVED: {int_to_hex_string(RESERVED_4_3)}, \
+                    [2] Z_HLT_EN: {int_to_hex_string(Z_HLT_EN_2)}, \
+                    [1] Y_HLT_EN: {int_to_hex_string(Y_HLT_EN_1)}, \
+                    [0] X_HLT_EN: {int_to_hex_string(X_HLT_EN_0)}"
+
+    def __SENSOR_CONFIG_DecodingFunction(self, data: int):
+        ANGLE_EN_15_14      = get_masked_value(data, 14,    0x0003)
+        SLEEPTIME_13_10     = get_masked_value(data, 10,    0x000F)
+        MAG_CH_EN_9_6       = get_masked_value(data, 6,     0x000F)
+        Z_RANGE_5_4         = get_masked_value(data, 4,     0x0003)
+        Y_RANGE_3_2         = get_masked_value(data, 2,     0x0003)
+        X_RANGE_1_0         = get_masked_value(data, 0,     0x0003)
+        return    f"[15-14] ANGLE_EN: {int_to_hex_string(ANGLE_EN_15_14)}, \
+                    [13-10] SLEEPTIME: {int_to_hex_string(SLEEPTIME_13_10)}, \
+                    [9-6] MAG_CH_EN: {int_to_hex_string(MAG_CH_EN_9_6)}, \
+                    [5-4] Z_RANGE: {int_to_hex_string(Z_RANGE_5_4)}, \
+                    [3-2] Y_RANGE: {int_to_hex_string(Y_RANGE_3_2)}, \
+                    [1-0] X_RANGE: {int_to_hex_string(X_RANGE_1_0)}"
+
+    def __DEVICE_CONFIG_DecodingFunction(self, data: int):
+        RESERVED_15         = get_masked_value(data, 15,    0x0001)
+        CONV_AVG_14_12      = get_masked_value(data, 12,    0x0003)
+        RESERVED_11_10      = get_masked_value(data, 10,    0x0003)
+        MAG_TEMPCO_9_8      = get_masked_value(data, 8,     0x0003)
+        RESERVED_7          = get_masked_value(data, 7,     0x0001)
+        OPERATING_MODE_6_4  = get_masked_value(data, 4,     0x0007)
+        T_CH_EN_3           = get_masked_value(data, 3,     0x0001)
+        T_RATE_2            = get_masked_value(data, 2,     0x0001)
+        T_HLT_EN_1          = get_masked_value(data, 1,     0x0001)
+        RESERVED_0          = get_masked_value(data, 0,     0x0003)
+        return    f"[15] RESERVED: {int_to_hex_string(RESERVED_15)}, \
+                    [14-12] CONV_AVG: {int_to_hex_string(CONV_AVG_14_12)}, \
+                    [11-10] RESERVED: {int_to_hex_string(RESERVED_11_10)}, \
+                    [9-8] MAG_TEMPCO: {int_to_hex_string(MAG_TEMPCO_9_8)}, \
+                    [7] RESERVED: {int_to_hex_string(RESERVED_7)}, \
+                    [6-4] OPERATING_MODE: {int_to_hex_string(OPERATING_MODE_6_4)}, \
+                    [3] T_CH_EN: {int_to_hex_string(T_CH_EN_3)}, \
+                    [2] T_RATE: {int_to_hex_string(T_RATE_2)}, \
+                    [1] T_HLT_EN: {int_to_hex_string(T_HLT_EN_1)}, \
+                    [0] RESERVED: {int_to_hex_string(RESERVED_0)}"
 
     def __CONV_STATUS_DecodingFunction(self, data: int):
         RESERVED_15_14  = get_masked_value(data, 14,    0x0003)

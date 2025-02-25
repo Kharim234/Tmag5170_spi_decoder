@@ -322,13 +322,20 @@ class tmga5170_frame_decoder:
     
     def get_16_bit_spi_data_tmag5170 (self, value: int) -> int:
         return get_masked_value(value, TMAG5170_16_BIT_SPI_DATA_POSITION, TMAG5170_16_BIT_SPI_DATA_MASK)
-        
+
+
     def get_register_acronym(self, register_index: int):
-        return self.__Tmag5170_register_mapping[register_index].Acronym
+        retString = "Error, not possible index value"
+        if register_index in self.__Tmag5170_register_mapping:
+            retString = self.__Tmag5170_register_mapping[register_index].Acronym
+        return retString
     
     def get_register_decoded_description(self, register_index: int, data_32_bit_spi: int):
-        data_16_bit_spi = self.get_16_bit_spi_data_tmag5170(data_32_bit_spi)
-        return self.__Tmag5170_register_mapping[register_index].DecodingFunction(data_16_bit_spi)
+        retString = "Error, not possible index value"
+        if register_index in self.__Tmag5170_register_mapping:
+            data_16_bit_spi = self.get_16_bit_spi_data_tmag5170(data_32_bit_spi)
+            retString = self.__Tmag5170_register_mapping[register_index].DecodingFunction(data_16_bit_spi)
+        return retString
 
     def get_register_index_from_tmag5170_frame (self, mosi_value: int) -> int:
         return get_masked_value(mosi_value, REGISTER_ADDR_POSITION, REGISTER_ADDR_MASK)
@@ -439,6 +446,8 @@ class Hla(HighLevelAnalyzer):
         register_decoding = ""
         mosi_crc_calculated = None
         miso_crc_calculated = None
+        mosi_crc_from_bus = None
+        miso_crc_from_bus = None
         register_value = None
         stat_2_0 = ""
         error_stat = ""
@@ -452,6 +461,8 @@ class Hla(HighLevelAnalyzer):
         prev_crc_stat = ""
         cmd0 = ""
         cmd1 = ""
+        cmd2 = ""
+        cmd3 = ""
 
         if(frame.type == "enable"):
             print("Enable start time " + str(frame.start_time))
@@ -496,17 +507,19 @@ class Hla(HighLevelAnalyzer):
             if(( self.enable_time != None )and( self.disable_time != None )):
                 retVal = AnalyzerFrame('tmag5170', self.enable_time, self.disable_time, 
                                        {\
-                                            'mosi_frame':MOSI,                                                                \
+                                            'mosi_frame':MOSI,                                                          \
                                             'mosi_crc_calculated':int_to_hex_string(mosi_crc_calculated),               \
-                                            'miso_frame':MISO,                                                                \
-                                            'miso_crc_calculated':int_to_hex_string(miso_crc_calculated),               \
-                                            'crc_miso_correct':crc_miso_correct,                                        \
+                                            'mosi_crc_from_bus':int_to_hex_string(mosi_crc_from_bus),                   \
                                             'crc_mosi_correct':crc_mosi_correct,                                        \
+                                            'miso_frame':MISO,                                                          \
+                                            'miso_crc_calculated':int_to_hex_string(miso_crc_calculated),               \
+                                            'miso_crc_from_bus':int_to_hex_string(miso_crc_from_bus),                   \
+                                            'crc_miso_correct':crc_miso_correct,                                        \
                                             'read_write':read_write,                                                    \
                                             'register_address':int_to_hex_string(register_address),                     \
                                             'register_name':register_name,                                              \
-                                            'register_decoding':register_decoding,                                      \
                                             'register_value':int_to_hex_string(register_value),                         \
+                                            'register_decoding':register_decoding,                                      \
                                             'stat_2_0':stat_2_0,                                                        \
                                             'error_stat':error_stat,                                                    \
                                             't_stat':t_stat,                                                            \
@@ -517,6 +530,8 @@ class Hla(HighLevelAnalyzer):
                                             'sys_alrt_status1_stat':sys_alrt_status1_stat,                              \
                                             'cfg_reset_stat':cfg_reset_stat,                                            \
                                             'prev_crc_stat':prev_crc_stat,                                              \
+                                            'cmd3':cmd3,                                                                \
+                                            'cmd2':cmd2,                                                                \
                                             'cmd1':cmd1,                                                                \
                                             'cmd0':cmd0,                                                                \
                                         })

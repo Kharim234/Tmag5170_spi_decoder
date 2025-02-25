@@ -463,6 +463,7 @@ class Hla(HighLevelAnalyzer):
         cmd1 = ""
         cmd2 = ""
         cmd3 = ""
+        retVal = None
 
         if(frame.type == "enable"):
             print("Enable start time " + str(frame.start_time))
@@ -539,7 +540,7 @@ class Hla(HighLevelAnalyzer):
             self.enable_time = None
             self.frame_data_MISO = []
             self.frame_data_MOSI = []
-            if(( retVal.start_time != None )and( retVal.end_time != None )):
+            if( retVal != None ):
                 return retVal
 
         if(frame.type == "result"):

@@ -439,6 +439,19 @@ class Hla(HighLevelAnalyzer):
         register_decoding = ""
         mosi_crc_calculated = None
         miso_crc_calculated = None
+        register_value = None
+        stat_2_0 = ""
+        error_stat = ""
+        t_stat = ""
+        z_stat = ""
+        y_stat = ""
+        x_stat = ""
+        afe_alrt_status0_stat = ""
+        sys_alrt_status1_stat = ""
+        cfg_reset_stat = ""
+        prev_crc_stat = ""
+        cmd0 = ""
+        cmd1 = ""
 
         if(frame.type == "enable"):
             print("Enable start time " + str(frame.start_time))
@@ -459,6 +472,7 @@ class Hla(HighLevelAnalyzer):
                     read_write = READ_REGISTER_TOKEN
                 else:
                     read_write = WRITE_REGISTER_TOKEN
+                    register_value = self.decoder.get_16_bit_spi_data_tmag5170(mosi_value)
                     register_decoding = self.decoder.get_register_decoded_description(register_address, mosi_value)
 
                 for i in self.frame_data_MOSI:
@@ -472,6 +486,7 @@ class Hla(HighLevelAnalyzer):
                 miso_crc_calculated, miso_crc_from_bus, crc_miso_correct = self.decoder.calculate_tmag5170_crc(miso_value)
 
                 if read_write == READ_REGISTER_TOKEN:
+                    register_value = self.decoder.get_16_bit_spi_data_tmag5170(miso_value)
                     register_decoding = self.decoder.get_register_decoded_description(register_address, miso_value)
                 
                 for i in self.frame_data_MISO:
@@ -480,10 +495,10 @@ class Hla(HighLevelAnalyzer):
                 MISO = LENGTH_ERROR_TOKEN
             if(( self.enable_time != None )and( self.disable_time != None )):
                 retVal = AnalyzerFrame('tmag5170', self.enable_time, self.disable_time, 
-                                       {                                                                                \
-                                            'mosi':MOSI,                                                                \
+                                       {\
+                                            'mosi_frame':MOSI,                                                                \
                                             'mosi_crc_calculated':int_to_hex_string(mosi_crc_calculated),               \
-                                            'miso':MISO,                                                                \
+                                            'miso_frame':MISO,                                                                \
                                             'miso_crc_calculated':int_to_hex_string(miso_crc_calculated),               \
                                             'crc_miso_correct':crc_miso_correct,                                        \
                                             'crc_mosi_correct':crc_mosi_correct,                                        \
@@ -491,6 +506,19 @@ class Hla(HighLevelAnalyzer):
                                             'register_address':int_to_hex_string(register_address),                     \
                                             'register_name':register_name,                                              \
                                             'register_decoding':register_decoding,                                      \
+                                            'register_value':int_to_hex_string(register_value),                         \
+                                            'stat_2_0':stat_2_0,                                                        \
+                                            'error_stat':error_stat,                                                    \
+                                            't_stat':t_stat,                                                            \
+                                            'z_stat':z_stat,                                                            \
+                                            'y_stat':y_stat,                                                            \
+                                            'x_stat':x_stat,                                                            \
+                                            'afe_alrt_status0_stat':afe_alrt_status0_stat,                              \
+                                            'sys_alrt_status1_stat':sys_alrt_status1_stat,                              \
+                                            'cfg_reset_stat':cfg_reset_stat,                                            \
+                                            'prev_crc_stat':prev_crc_stat,                                              \
+                                            'cmd1':cmd1,                                                                \
+                                            'cmd0':cmd0,                                                                \
                                         })
             self.disable_time = None
             self.enable_time = None

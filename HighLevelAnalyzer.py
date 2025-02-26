@@ -59,8 +59,11 @@ def int_to_hex_string(value:int):
     else:
         return hex(value).upper().replace('X', 'x')
 class tmga5170_frame_decoder:
+    __tmag5170_mapping_type = collections.namedtuple('__tmag5170_mapping_type', ['Acronym', 'DecodingFunction'])
+    crc_group_type = collections.namedtuple('crc_group_type', ['crc_status','crc_calculated','crc_from_bus'])
+    register_group_type = collections.namedtuple('register_group_type', ['read_write','register_address','register_name','register_decoding','register_value'])
+
     def __init__(self):
-        self.__tmag5170_mapping_type = collections.namedtuple('__tmag5170_mapping_type', ['Acronym', 'DecodingFunction'])
         self.__Tmag5170_register_mapping = {
             0x00: self.__tmag5170_mapping_type("DEVICE_CONFIG"    ,    self.__DEVICE_CONFIG_DecodingFunction)     ,
             0x01: self.__tmag5170_mapping_type("SENSOR_CONFIG"    ,    self.__SENSOR_CONFIG_DecodingFunction)     ,
@@ -82,11 +85,12 @@ class tmga5170_frame_decoder:
             0x11: self.__tmag5170_mapping_type("MAG_GAIN_CONFIG"  ,    self.__MAG_GAIN_CONFIG_DecodingFunction)   ,
             0x12: self.__tmag5170_mapping_type("MAG_OFFSET_CONFIG",    self.__MAG_OFFSET_CONFIG_DecodingFunction) ,
             0x13: self.__tmag5170_mapping_type("ANGLE_RESULT"     ,    self.__ANGLE_RESULT_DecodingFunction)      ,
-            0x14: self.__tmag5170_mapping_type("MAGNITUDE_RESULT" ,    self.__MAGNITUDE_RESULT_DecodingFunction)     
+            0x14: self.__tmag5170_mapping_type("MAGNITUDE_RESULT" ,    self.__MAGNITUDE_RESULT_DecodingFunction)
         }
-
-
-    def __MAG_OFFSET_CONFIG_DecodingFunction(self, data: int):
+        self.mosi_value = None
+        self.miso_value = None
+    @staticmethod 
+    def __MAG_OFFSET_CONFIG_DecodingFunction(data: int):
         OFFSET_SELECTION_15_14 = get_masked_value(data, 14,    0x0003)
         OFFSET_VALUE1__13_7    = get_masked_value(data, 7,    0x007F)
         OFFSET_VALUE2__6_0     = get_masked_value(data, 0,    0x007F)
@@ -94,7 +98,8 @@ class tmga5170_frame_decoder:
                     [13-7] OFFSET_VALUE1: {uintX_to_intX_represented_on_8_bits(OFFSET_VALUE1__13_7, 7)}, \
                     [6-0] OFFSET_VALUE2: {uintX_to_intX_represented_on_8_bits(OFFSET_VALUE2__6_0, 7)}"
 
-    def __MAG_GAIN_CONFIG_DecodingFunction(self, data: int):
+    @staticmethod 
+    def __MAG_GAIN_CONFIG_DecodingFunction(data: int):
         GAIN_SELECTION_15_14 = get_masked_value(data, 14,    0x0003)
         RESERVED_13_11       = get_masked_value(data, 11,    0x0007)
         GAIN_VALUE_10_0      = get_masked_value(data, 10,    0x07FF)
@@ -102,7 +107,8 @@ class tmga5170_frame_decoder:
                     [13-11] RESERVED: {int_to_hex_string(RESERVED_13_11)}, \
                     [10-0] GAIN_VALUE: {int_to_hex_string(GAIN_VALUE_10_0)}"
 
-    def __ALERT_CONFIG_DecodingFunction(self, data: int):
+    @staticmethod
+    def __ALERT_CONFIG_DecodingFunction(data: int):
         RESERVED_15_14      = get_masked_value(data, 14,    0x0003)
         ALERT_LATCH_13      = get_masked_value(data, 13,    0x0001)
         ALERT_MODE_12       = get_masked_value(data, 12,    0x0001)
@@ -128,7 +134,8 @@ class tmga5170_frame_decoder:
                     [1] Y_THRX_ALRT: {int_to_hex_string(Y_THRX_ALRT_1)}, \
                     [0] X_THRX_ALRT: {int_to_hex_string(X_THRX_ALRT_0)}"
 
-    def __SYSTEM_CONFIG_DecodingFunction(self, data: int):
+    @staticmethod
+    def __SYSTEM_CONFIG_DecodingFunction(data: int):
         RESERVED_15_14      = get_masked_value(data, 14,    0x0003)
         DIAG_SEL_13_12      = get_masked_value(data, 12,    0x0003)
         RESERVED_11         = get_masked_value(data, 11,    0x0001)
@@ -150,7 +157,8 @@ class tmga5170_frame_decoder:
                     [1] Y_HLT_EN: {int_to_hex_string(Y_HLT_EN_1)}, \
                     [0] X_HLT_EN: {int_to_hex_string(X_HLT_EN_0)}"
 
-    def __SENSOR_CONFIG_DecodingFunction(self, data: int):
+    @staticmethod
+    def __SENSOR_CONFIG_DecodingFunction(data: int):
         ANGLE_EN_15_14      = get_masked_value(data, 14,    0x0003)
         SLEEPTIME_13_10     = get_masked_value(data, 10,    0x000F)
         MAG_CH_EN_9_6       = get_masked_value(data, 6,     0x000F)
@@ -164,7 +172,8 @@ class tmga5170_frame_decoder:
                     [3-2] Y_RANGE: {int_to_hex_string(Y_RANGE_3_2)}, \
                     [1-0] X_RANGE: {int_to_hex_string(X_RANGE_1_0)}"
 
-    def __DEVICE_CONFIG_DecodingFunction(self, data: int):
+    @staticmethod
+    def __DEVICE_CONFIG_DecodingFunction(data: int):
         RESERVED_15         = get_masked_value(data, 15,    0x0001)
         CONV_AVG_14_12      = get_masked_value(data, 12,    0x0003)
         RESERVED_11_10      = get_masked_value(data, 10,    0x0003)
@@ -186,7 +195,8 @@ class tmga5170_frame_decoder:
                     [1] T_HLT_EN: {int_to_hex_string(T_HLT_EN_1)}, \
                     [0] RESERVED: {int_to_hex_string(RESERVED_0)}"
 
-    def __CONV_STATUS_DecodingFunction(self, data: int):
+    @staticmethod
+    def __CONV_STATUS_DecodingFunction(data: int):
         RESERVED_15_14  = get_masked_value(data, 14,    0x0003)
         RDY_13          = get_masked_value(data, 13,    0x0001)
         A_12            = get_masked_value(data, 12,    0x0001)
@@ -210,42 +220,51 @@ class tmga5170_frame_decoder:
                     [3-2] RESERVED: {int_to_hex_string(RESERVED_3_2)}, \
                     [1-0] ALRT_STATUS: {int_to_hex_string(ALRT_STATUS_1_0)}"
 
-    def __X_THRX_CONFIG_DecodingFunction(self, data: int):
+    @staticmethod
+    def __X_THRX_CONFIG_DecodingFunction(data: int):
         X_HI_THRESHOLD_15_8 = uint8_to_int8(get_masked_value(data, 8, 0xFF))
         X_LO_THRESHOLD_7_0  = uint8_to_int8(get_masked_value(data, 0, 0xFF))
         return f"[15-8] X_HI_THRESHOLD: {X_HI_THRESHOLD_15_8}, [7-0] X_LO_THRESHOLD: {X_LO_THRESHOLD_7_0}"
-    
-    def __Y_THRX_CONFIG_DecodingFunction(self, data: int):
+
+    @staticmethod
+    def __Y_THRX_CONFIG_DecodingFunction(data: int):
         Y_HI_THRESHOLD_15_8 = uint8_to_int8(get_masked_value(data, 8, 0xFF))
         Y_LO_THRESHOLD_7_0  = uint8_to_int8(get_masked_value(data, 0, 0xFF))
         return f"[15-8] Y_HI_THRESHOLD: {Y_HI_THRESHOLD_15_8}, [7-0] Y_LO_THRESHOLD: {Y_LO_THRESHOLD_7_0}"
-    
-    def __Z_THRX_CONFIG_DecodingFunction(self, data: int):
+
+    @staticmethod
+    def __Z_THRX_CONFIG_DecodingFunction(data: int):
         Z_HI_THRESHOLD_15_8 = uint8_to_int8(get_masked_value(data, 8, 0xFF))
         Z_LO_THRESHOLD_7_0  = uint8_to_int8(get_masked_value(data, 0, 0xFF))
         return f"[15-8] Z_HI_THRESHOLD: {Z_HI_THRESHOLD_15_8}, [7-0] Z_LO_THRESHOLD: {Z_LO_THRESHOLD_7_0}"
-    
-    def __T_THRX_CONFIG_DecodingFunction(self, data: int):
+
+    @staticmethod
+    def __T_THRX_CONFIG_DecodingFunction(data: int):
         T_HI_THRESHOLD_15_8 = uint8_to_int8(get_masked_value(data, 8, 0xFF))
         T_LO_THRESHOLD_7_0  = uint8_to_int8(get_masked_value(data, 0, 0xFF))
         return f"[15-8] T_HI_THRESHOLD: {T_HI_THRESHOLD_15_8}, [7-0] T_LO_THRESHOLD: {T_LO_THRESHOLD_7_0}"
 
-    def __X_CH_RESULT_DecodingFunction(self, data: int):
+    @staticmethod
+    def __X_CH_RESULT_DecodingFunction(data: int):
         int_val = uint16_to_int16(data)
         return f"[15-0] X_CH_RESULT: {int_val}"
 
-    def __Y_CH_RESULT_DecodingFunction(self, data: int):
+    @staticmethod
+    def __Y_CH_RESULT_DecodingFunction(data: int):
         int_val = uint16_to_int16(data)
         return f"[15-0] Y_CH_RESULT: {int_val}"
 
-    def __Z_CH_RESULT_DecodingFunction(self, data: int):
+    @staticmethod
+    def __Z_CH_RESULT_DecodingFunction(data: int):
         int_val = uint16_to_int16(data)
         return f"[15-0] Z_CH_RESULT: {int_val}"
 
-    def __TEMP_RESULT_DecodingFunction(self, data: int):
+    @staticmethod
+    def __TEMP_RESULT_DecodingFunction(data: int):
         return f"[15-0] TEMP_RESULT: {data}"
 
-    def __AFE_STATUS_DecodingFunction(self, data: int):
+    @staticmethod
+    def __AFE_STATUS_DecodingFunction(data: int):
         CFG_RESET_15    = get_masked_value(data, 15,    0x0001)
         RESERVED_14_13  = get_masked_value(data, 13,    0x0003)
         SENS_STAT_12    = get_masked_value(data, 12,    0x0001)
@@ -267,7 +286,8 @@ class tmga5170_frame_decoder:
                     [1] TRIM_STAT: {int_to_hex_string(TRIM_STAT_1)}, \
                     [0] LDO_STAT: {int_to_hex_string(LDO_STAT_0)}"
 
-    def __SYS_STATUS_DecodingFunction(self, data: int):
+    @staticmethod
+    def __SYS_STATUS_DecodingFunction(data: int):
         ALRT_LVL_15             = get_masked_value(data, 15,    0x0001)
         ALRT_DRV_14             = get_masked_value(data, 14,    0x0001)
         SDO_DRV_13              = get_masked_value(data, 13,    0x0001)
@@ -295,11 +315,12 @@ class tmga5170_frame_decoder:
                     [1] YCH_THX: {int_to_hex_string(YCH_THX_1)}, \
                     [0] XCH_THX: {int_to_hex_string(XCH_THX_0)}"
 
-    def __ANGLE_RESULT_DecodingFunction(self, data: int):
+    @staticmethod
+    def __ANGLE_RESULT_DecodingFunction(data: int):
         return f"[15-0] ANGLE_RESULT: {data}"
 
-
-    def __TEST_CONFIG_DecodingFunction(self, data: int):
+    @staticmethod
+    def __TEST_CONFIG_DecodingFunction(data: int):
         RESERVED_15_6   = get_masked_value(data, 6, 0x03FF)
         VER_5_4         = get_masked_value(data, 4, 0x0003)
         RESERVED_3      = get_masked_value(data, 3, 0x0001)
@@ -310,37 +331,51 @@ class tmga5170_frame_decoder:
                     [3] RESERVED: {int_to_hex_string(RESERVED_3)}, \
                     [2] CRC_DIS: {int_to_hex_string(CRC_DIS_2)}, \
                     [1-0] OSC_CNT_CTL: {int_to_hex_string(OSC_CNT_CTL_1_0)}"
-    
-    def __OSC_MONITOR_DecodingFunction(self, data: int):
+
+    @staticmethod
+    def __OSC_MONITOR_DecodingFunction(data: int):
         return f"[15-0] OSC_COUNT: {data}"
 
-    def __MAGNITUDE_RESULT_DecodingFunction(self, data: int):
+    @staticmethod
+    def __MAGNITUDE_RESULT_DecodingFunction(data: int):
         return f"[15-0] MAGNITUDE_RESULT: {data}"
 
-    def __dummyDecodingFunction(self, data: int):
+    @staticmethod
+    def __dummyDecodingFunction(data: int):
         return "Not yet implemented"
     
-    def get_16_bit_spi_data_tmag5170 (self, value: int) -> int:
-        return get_masked_value(value, TMAG5170_16_BIT_SPI_DATA_POSITION, TMAG5170_16_BIT_SPI_DATA_MASK)
+    @staticmethod
+    def get_16_bit_spi_data_tmag5170 (value):
+        if(value != None):
+            retVal = get_masked_value(value, TMAG5170_16_BIT_SPI_DATA_POSITION, TMAG5170_16_BIT_SPI_DATA_MASK)
+        else:
+            retVal = None
+        return retVal
 
 
-    def get_register_acronym(self, register_index: int):
+    def get_register_acronym(self, register_index):
         retString = "Error, not possible index value"
         if register_index in self.__Tmag5170_register_mapping:
             retString = self.__Tmag5170_register_mapping[register_index].Acronym
         return retString
     
-    def get_register_decoded_description(self, register_index: int, data_32_bit_spi: int):
+    def get_register_decoded_description(self, register_index, data_32_bit_spi):
         retString = "Error, not possible index value"
         if register_index in self.__Tmag5170_register_mapping:
             data_16_bit_spi = self.get_16_bit_spi_data_tmag5170(data_32_bit_spi)
             retString = self.__Tmag5170_register_mapping[register_index].DecodingFunction(data_16_bit_spi)
         return retString
 
-    def get_register_index_from_tmag5170_frame (self, mosi_value: int) -> int:
-        return get_masked_value(mosi_value, REGISTER_ADDR_POSITION, REGISTER_ADDR_MASK)
-        
-    def convert_tmag5170_bytes_to_int (self, data, start_position: int) -> int:
+    @staticmethod
+    def get_register_index_from_tmag5170_frame (mosi_value):
+        if(mosi_value != None):
+            value = get_masked_value(mosi_value, REGISTER_ADDR_POSITION, REGISTER_ADDR_MASK)
+        else:
+            value = None
+        return value
+
+    @staticmethod 
+    def convert_tmag5170_bytes_to_int (data, start_position: int):
         value = None
         length = len(data)
         if ((length - start_position) >= TMAG5170_SINGLE_FRAME_BYTE_SIZE):
@@ -354,11 +389,38 @@ class tmga5170_frame_decoder:
             value = int.from_bytes(data_joined, 'big', signed = False) 
         return value
 
-    def calculate_tmag5170_crc (self, data: int):
-        crc_calculated = None
-        crc_from_bus = None
-        crc_status = None
 
+
+    def set_mosi_miso_raw_data(self, mosi_raw_data, miso_raw_data):
+
+        if(len(mosi_raw_data) == TMAG5170_SINGLE_FRAME_BYTE_SIZE):
+            self.mosi_value = tmga5170_frame_decoder.convert_tmag5170_bytes_to_int(mosi_raw_data, 0)
+        else:
+            self.mosi_value = None
+
+        if(len(miso_raw_data) == TMAG5170_SINGLE_FRAME_BYTE_SIZE):
+            self.miso_value = tmga5170_frame_decoder.convert_tmag5170_bytes_to_int(miso_raw_data, 0)
+        else:
+            self.miso_value = None
+
+    @staticmethod
+    def convert_uint_to_mosi_miso_str(value: int):
+        if value != None:
+            str_value = int_to_hex_string(value)
+        else:
+            str_value = LENGTH_ERROR_TOKEN
+        return str_value
+        
+    def get_mosi_miso_str(self):
+        str_mosi_value = tmga5170_frame_decoder.convert_uint_to_mosi_miso_str(self.mosi_value)
+        str_miso_value = tmga5170_frame_decoder.convert_uint_to_mosi_miso_str(self.miso_value)
+        return  str_mosi_value, str_miso_value
+
+    @staticmethod
+    def calculate_tmag5170_crc (data):
+        crc_from_bus = None
+        crc_status = ""
+        crc_calculated = None
         if (data != None):
             crc_from_bus = data & 0x0F
             padded_frame = data & 0xFFFFFFF0
@@ -378,12 +440,30 @@ class tmga5170_frame_decoder:
                 crc_status = CRC_OK_TOKEN
             else:
                 crc_status = CRC_ERROR_TOKEN
-        return crc_calculated, crc_from_bus, crc_status
-    
+        return tmga5170_frame_decoder.crc_group_type(crc_status, crc_calculated, crc_from_bus)
 
+    def get_crc_group(self):
+        miso_crc_group = tmga5170_frame_decoder.calculate_tmag5170_crc(self.miso_value)
+        mosi_crc_group = tmga5170_frame_decoder.calculate_tmag5170_crc(self.mosi_value)
+        return miso_crc_group, mosi_crc_group
 
-
-
+    def get_register_group(self):
+        register_address = self.get_register_index_from_tmag5170_frame(self.mosi_value)
+        register_name = self.get_register_acronym(register_address)
+        if self.mosi_value != None:
+            if get_bit(self.mosi_value, READ_WRITE_BIT_POSITION) == 1:
+                read_write = READ_REGISTER_TOKEN
+                register_value = tmga5170_frame_decoder.get_16_bit_spi_data_tmag5170(self.miso_value)
+                register_decoding = self.get_register_decoded_description(register_address, self.miso_value)
+            else:
+                read_write = WRITE_REGISTER_TOKEN
+                register_value = tmga5170_frame_decoder.get_16_bit_spi_data_tmag5170(self.mosi_value)
+                register_decoding = self.get_register_decoded_description(register_address, self.mosi_value)
+        else:
+            read_write = ""
+            register_value = None
+            register_decoding = ""
+        return tmga5170_frame_decoder.register_group_type(read_write, register_address, register_name, register_decoding, register_value)
 
 
 
@@ -438,17 +518,9 @@ class Hla(HighLevelAnalyzer):
 
         The type and data values in `frame` will depend on the input analyzer.
         '''
-        crc_mosi_correct = ""
-        crc_miso_correct = ""
-        read_write = ""
-        register_address = None
-        register_name = ""
-        register_decoding = ""
-        mosi_crc_calculated = None
-        miso_crc_calculated = None
-        mosi_crc_from_bus = None
-        miso_crc_from_bus = None
-        register_value = None
+        print(self.decoder.get_crc_group())
+
+
         stat_2_0 = ""
         error_stat = ""
         t_stat = ""
@@ -464,6 +536,8 @@ class Hla(HighLevelAnalyzer):
         cmd2 = ""
         cmd3 = ""
         retVal = None
+        mosi_frame = ""
+        miso_frame = ""
 
         if(frame.type == "enable"):
             print("Enable start time " + str(frame.start_time))
@@ -473,54 +547,30 @@ class Hla(HighLevelAnalyzer):
             self.disable_time = frame.start_time
             print(str(self.frame_data_MOSI))
 
-            if(len(self.frame_data_MOSI) == TMAG5170_SINGLE_FRAME_BYTE_SIZE):
-                MOSI  = "0x"
-                mosi_value = self.decoder.convert_tmag5170_bytes_to_int(self.frame_data_MOSI, 0)
-                mosi_crc_calculated, mosi_crc_from_bus, crc_mosi_correct = self.decoder.calculate_tmag5170_crc(mosi_value)
-                register_address = self.decoder.get_register_index_from_tmag5170_frame(mosi_value)
-                register_name = self.decoder.get_register_acronym(register_address)
+            self.decoder.set_mosi_miso_raw_data(self.frame_data_MOSI, self.frame_data_MISO)
 
-                if get_bit(mosi_value, READ_WRITE_BIT_POSITION) == 1:
-                    read_write = READ_REGISTER_TOKEN
-                else:
-                    read_write = WRITE_REGISTER_TOKEN
-                    register_value = self.decoder.get_16_bit_spi_data_tmag5170(mosi_value)
-                    register_decoding = self.decoder.get_register_decoded_description(register_address, mosi_value)
+            mosi_frame, miso_frame = self.decoder.get_mosi_miso_str()
+            miso_crc_group, mosi_crc_group = self.decoder.get_crc_group()
+            register_group = self.decoder.get_register_group()
 
-                for i in self.frame_data_MOSI:
-                    MOSI += (i.hex()).upper()
-            else:
-                MOSI = LENGTH_ERROR_TOKEN
-            
-            if(len(self.frame_data_MISO) == TMAG5170_SINGLE_FRAME_BYTE_SIZE):
-                MISO  = "0x"
-                miso_value = self.decoder.convert_tmag5170_bytes_to_int(self.frame_data_MISO, 0)
-                miso_crc_calculated, miso_crc_from_bus, crc_miso_correct = self.decoder.calculate_tmag5170_crc(miso_value)
+            print(register_group)
 
-                if read_write == READ_REGISTER_TOKEN:
-                    register_value = self.decoder.get_16_bit_spi_data_tmag5170(miso_value)
-                    register_decoding = self.decoder.get_register_decoded_description(register_address, miso_value)
-                
-                for i in self.frame_data_MISO:
-                    MISO += (i.hex()).upper()
-            else:
-                MISO = LENGTH_ERROR_TOKEN
             if(( self.enable_time != None )and( self.disable_time != None )):
                 retVal = AnalyzerFrame('tmag5170', self.enable_time, self.disable_time, 
                                        {\
-                                            'mosi_frame':MOSI,                                                          \
-                                            'mosi_crc_calculated':int_to_hex_string(mosi_crc_calculated),               \
-                                            'mosi_crc_from_bus':int_to_hex_string(mosi_crc_from_bus),                   \
-                                            'crc_mosi_correct':crc_mosi_correct,                                        \
-                                            'miso_frame':MISO,                                                          \
-                                            'miso_crc_calculated':int_to_hex_string(miso_crc_calculated),               \
-                                            'miso_crc_from_bus':int_to_hex_string(miso_crc_from_bus),                   \
-                                            'crc_miso_correct':crc_miso_correct,                                        \
-                                            'read_write':read_write,                                                    \
-                                            'register_address':int_to_hex_string(register_address),                     \
-                                            'register_name':register_name,                                              \
-                                            'register_value':int_to_hex_string(register_value),                         \
-                                            'register_decoding':register_decoding,                                      \
+                                            'mosi_frame':mosi_frame,                                                          \
+                                            'mosi_crc_calculated':int_to_hex_string(mosi_crc_group.crc_calculated),               \
+                                            'mosi_crc_from_bus':int_to_hex_string(mosi_crc_group.crc_from_bus),                   \
+                                            'crc_mosi_correct':mosi_crc_group.crc_status,                                        \
+                                            'miso_frame':miso_frame,                                                          \
+                                            'miso_crc_calculated':int_to_hex_string(miso_crc_group.crc_calculated),               \
+                                            'miso_crc_from_bus':int_to_hex_string(miso_crc_group.crc_from_bus),                   \
+                                            'crc_miso_correct':miso_crc_group.crc_status,                                        \
+                                            'read_write':register_group.read_write,                                                    \
+                                            'register_address':int_to_hex_string(register_group.register_address),                     \
+                                            'register_name':register_group.register_name,                                              \
+                                            'register_value':int_to_hex_string(register_group.register_value),                         \
+                                            'register_decoding':register_group.register_decoding,                                      \
                                             'stat_2_0':stat_2_0,                                                        \
                                             'error_stat':error_stat,                                                    \
                                             't_stat':t_stat,                                                            \

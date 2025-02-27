@@ -65,7 +65,7 @@ class tmga5170_frame_decoder:
     address_8bit_register_16bit_group_type = collections.namedtuple('address_8bit_register_16bit_group_type', ['read_write','register_address','register_name','register_decoding','register_value'])
     stat_8_bit_group_type = collections.namedtuple('stat_8_bit_group_type', ['prev_crc_stat','cfg_reset_stat','sys_alrt_status1_stat','afe_alrt_status0_stat','x_stat','y_stat','z_stat','t_stat'])
 
-    def __init__(self):
+    def __init__(self, enable__cmd_stat_4_bit_group = True, enable__stat_8_bit_group = True, crc_enabled = True, conv_avg_equal_0 = False, data_type_equal_0 = True):
         self.__Tmag5170_register_mapping = {
             0x00: self.__tmag5170_mapping_type("DEVICE_CONFIG"    ,    self.__DEVICE_CONFIG_DecodingFunction)     ,
             0x01: self.__tmag5170_mapping_type("SENSOR_CONFIG"    ,    self.__SENSOR_CONFIG_DecodingFunction)     ,
@@ -91,8 +91,11 @@ class tmga5170_frame_decoder:
         }
         self.mosi_value = None
         self.miso_value = None
-        self.enable__cmd_stat_4_bit_group = False
-        self.enable__stat_8_bit_group = False
+        self.enable__cmd_stat_4_bit_group = enable__cmd_stat_4_bit_group
+        self.enable__stat_8_bit_group = enable__stat_8_bit_group
+        self.crc_enabled = crc_enabled
+        self.conv_avg_equal_0 = conv_avg_equal_0
+        self.data_type_equal_0 = data_type_equal_0
     @staticmethod 
     def __MAG_OFFSET_CONFIG_DecodingFunction(data: int):
         OFFSET_SELECTION_15_14 = get_masked_value(data, 14,    0x0003)
@@ -530,14 +533,19 @@ class tmga5170_frame_decoder:
 # High level analyzers must subclass the HighLevelAnalyzer class.
 class Hla(HighLevelAnalyzer):
 
+    DATA_TYPE_NOT_EQUAL_O_STRING = "DATA_TYPE != 0h, Note: 12-Bit CH1 CH2 data access"
+    DATA_TYPE_EQUAL_O_STRING = "DATA_TYPE = 0h, Default 32-bit register access"
     #Only data type to which I have data is 0x00h due that others data_type are currently not implemented
-    DATA_TYPE = ChoicesSetting(choices=("0h = Default 32-bit register access",))
+    DATA_TYPE = ChoicesSetting(choices=(DATA_TYPE_EQUAL_O_STRING, DATA_TYPE_NOT_EQUAL_O_STRING))
 
+    CRC_EN_STRING = "CRC_DIS = 0h, CRC enabled in SPI communication"
+    CRC_DIS_STRING = "CRC_DIS = 1h, CRC disabled in SPI communication"
     #Disabling crc is lifting FRAME_STAT check due to lack of data how frames looks in this type I am not implementing this feature
-    CRC_DIS = ChoicesSetting(choices=("0h = CRC enabled in SPI communication",))
+    CRC_DIS = ChoicesSetting(choices=(CRC_EN_STRING,CRC_DIS_STRING))
 
-    #Disabling crc is lifting FRAME_STAT check due to lack of data how frames looks in this type I am not implementing this feature
-    CONV_AVG = ChoicesSetting(choices=("CONV_AVG != 0h, Note: X, Y, Z ch result is represented as 16 bits INT", "0h = 1x - 10.0Ksps (3-axes) or 20Ksps (1 axis), Note: X, Y, Z ch result is represented as 12 bits INT", ))
+    CONV_AVG_NOT_EQUAL_O_STRING = "CONV_AVG != 0h, Note: X, Y, Z ch result is represented as 16 bits INT"
+    CONV_AVG_EQUAL_O_STRING = "CONV_AVG = 0h, 1x - 10.0Ksps (3-axes) or 20Ksps (1 axis), Note: X, Y, Z ch result is represented as 12 bits INT"
+    CONV_AVG = ChoicesSetting(choices=(CONV_AVG_NOT_EQUAL_O_STRING, CONV_AVG_EQUAL_O_STRING))
     enable_time = None
     disable_time = None
     frame_data_MISO = []

@@ -483,7 +483,7 @@ class tmga5170_frame_decoder:
             cmd_stat_4_bit_group = tmga5170_frame_decoder.cmd_stat_4_bit_group_type(None, None, None, None, None, None)
         return miso_crc_group, mosi_crc_group, cmd_stat_4_bit_group
 
-    def get_register_group(self):
+    def get_address_8bit_register_16bit_group(self):
         register_address = self.get_register_index_from_tmag5170_frame(self.mosi_value)
         register_name = self.get_register_acronym(register_address)
         if self.mosi_value != None:
@@ -524,7 +524,7 @@ class tmga5170_frame_decoder:
         return tmga5170_frame_decoder.stat_8_bit_group_type(prev_crc_stat, cfg_reset_stat, sys_alrt_status1_stat, afe_alrt_status0_stat, x_stat, y_stat, z_stat, t_stat)
 
     def get_register_16_bit_address_stat_8_bit_group(self):
-        address_8bit_register_16bit_group = self.get_register_group()
+        address_8bit_register_16bit_group = self.get_address_8bit_register_16bit_group()
         if self.enable__stat_8_bit_group == True:
             stat_8_bit_group = self.get_stat_8_bit_group()
         else:

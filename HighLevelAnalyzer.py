@@ -60,8 +60,10 @@ def int_to_hex_string(value:int):
         return hex(value).upper().replace('X', 'x')
 class tmga5170_frame_decoder:
     __tmag5170_mapping_type = collections.namedtuple('__tmag5170_mapping_type', ['Acronym', 'DecodingFunction'])
-    crc_group_type = collections.namedtuple('crc_group_type', ['crc_status','crc_calculated','crc_from_bus'])
-    register_group_type = collections.namedtuple('register_group_type', ['read_write','register_address','register_name','register_decoding','register_value'])
+    crc_4_bit_group_type = collections.namedtuple('crc_4_bit_group_type', ['crc_status','crc_calculated','crc_from_bus'])
+    cmd_stat_4_bit_group_type = collections.namedtuple('cmd_stat_4_bit_group_type', ['cmd3', 'cmd2', 'cmd1', 'cmd0', 'error_stat', 'stat_2_0'])
+    address_8bit_register_16bit_group_type = collections.namedtuple('address_8bit_register_16bit_group_type', ['read_write','register_address','register_name','register_decoding','register_value'])
+    stat_8_bit_group_type = collections.namedtuple('stat_8_bit_group_type', ['prev_crc_stat','cfg_reset_stat','sys_alrt_status1_stat','afe_alrt_status0_stat','x_stat','y_stat','z_stat','t_stat'])
 
     def __init__(self):
         self.__Tmag5170_register_mapping = {
@@ -89,6 +91,8 @@ class tmga5170_frame_decoder:
         }
         self.mosi_value = None
         self.miso_value = None
+        self.enable__cmd_stat_4_bit_group = False
+        self.enable__stat_8_bit_group = False
     @staticmethod 
     def __MAG_OFFSET_CONFIG_DecodingFunction(data: int):
         OFFSET_SELECTION_15_14 = get_masked_value(data, 14,    0x0003)
@@ -421,6 +425,7 @@ class tmga5170_frame_decoder:
         crc_from_bus = None
         crc_status = ""
         crc_calculated = None
+
         if (data != None):
             crc_from_bus = data & 0x0F
             padded_frame = data & 0xFFFFFFF0
@@ -440,12 +445,37 @@ class tmga5170_frame_decoder:
                 crc_status = CRC_OK_TOKEN
             else:
                 crc_status = CRC_ERROR_TOKEN
-        return tmga5170_frame_decoder.crc_group_type(crc_status, crc_calculated, crc_from_bus)
+        return tmga5170_frame_decoder.crc_4_bit_group_type(crc_status, crc_calculated, crc_from_bus)
+    
+    @staticmethod
+    def retrieve_4_bit_cmd_stat (miso_data, mosi_data):
+        cmd3        = None
+        cmd2        = None
+        cmd1        = None
+        cmd0        = None
+        error_stat  = None
+        stat_2_0    = None
 
-    def get_crc_group(self):
+        if (miso_data != None):
+            error_stat  = get_bit(mosi_data, 7)
+            stat_2_0    = get_masked_value(miso_data, 4, 0x07)
+
+        if (mosi_data != None):
+            cmd0        = get_bit(mosi_data, 4)
+            cmd1        = get_bit(mosi_data, 5)
+            cmd2        = get_bit(mosi_data, 6)
+            cmd3        = get_bit(mosi_data, 7)
+
+        return tmga5170_frame_decoder.cmd_stat_4_bit_group_type(cmd3, cmd2, cmd1, cmd0, error_stat, stat_2_0)
+
+    def get_4_bit_crc_cmd_stat_group(self):
         miso_crc_group = tmga5170_frame_decoder.calculate_tmag5170_crc(self.miso_value)
         mosi_crc_group = tmga5170_frame_decoder.calculate_tmag5170_crc(self.mosi_value)
-        return miso_crc_group, mosi_crc_group
+        if self.enable__cmd_stat_4_bit_group == True:
+            cmd_stat_4_bit_group = tmga5170_frame_decoder.retrieve_4_bit_cmd_stat(self.miso_value, self.mosi_value)
+        else:
+            cmd_stat_4_bit_group = tmga5170_frame_decoder.cmd_stat_4_bit_group_type(None, None, None, None, None, None)
+        return miso_crc_group, mosi_crc_group, cmd_stat_4_bit_group
 
     def get_register_group(self):
         register_address = self.get_register_index_from_tmag5170_frame(self.mosi_value)
@@ -463,8 +493,38 @@ class tmga5170_frame_decoder:
             read_write = ""
             register_value = None
             register_decoding = ""
-        return tmga5170_frame_decoder.register_group_type(read_write, register_address, register_name, register_decoding, register_value)
+        return tmga5170_frame_decoder.address_8bit_register_16bit_group_type(read_write, register_address, register_name, register_decoding, register_value)
 
+    def get_stat_8_bit_group(self):
+        prev_crc_stat           = None
+        cfg_reset_stat          = None
+        sys_alrt_status1_stat   = None
+        afe_alrt_status0_stat   = None
+        x_stat                  = None
+        y_stat                  = None
+        z_stat                  = None
+        t_stat                  = None
+
+        if self.miso_value != None:
+            prev_crc_stat           = get_bit(self.miso_value, 31)
+            cfg_reset_stat          = get_bit(self.miso_value, 30)
+            sys_alrt_status1_stat   = get_bit(self.miso_value, 29)
+            afe_alrt_status0_stat   = get_bit(self.miso_value, 28)
+            x_stat                  = get_bit(self.miso_value, 27)
+            y_stat                  = get_bit(self.miso_value, 26)
+            z_stat                  = get_bit(self.miso_value, 25)
+            t_stat                  = get_bit(self.miso_value, 24)
+
+        return tmga5170_frame_decoder.stat_8_bit_group_type(prev_crc_stat, cfg_reset_stat, sys_alrt_status1_stat, afe_alrt_status0_stat, x_stat, y_stat, z_stat, t_stat)
+
+    def get_register_16_bit_address_stat_8_bit_group(self):
+        address_8bit_register_16bit_group = self.get_register_group()
+        if self.enable__stat_8_bit_group == True:
+            stat_8_bit_group = self.get_stat_8_bit_group()
+        else:
+            stat_8_bit_group = tmga5170_frame_decoder.stat_8_bit_group_type(None, None, None, None, None, None, None, None)
+        return address_8bit_register_16bit_group, stat_8_bit_group
+        
 
 
 # High level analyzers must subclass the HighLevelAnalyzer class.
@@ -518,23 +578,7 @@ class Hla(HighLevelAnalyzer):
 
         The type and data values in `frame` will depend on the input analyzer.
         '''
-        print(self.decoder.get_crc_group())
 
-
-        stat_2_0 = ""
-        error_stat = ""
-        t_stat = ""
-        z_stat = ""
-        y_stat = ""
-        x_stat = ""
-        afe_alrt_status0_stat = ""
-        sys_alrt_status1_stat = ""
-        cfg_reset_stat = ""
-        prev_crc_stat = ""
-        cmd0 = ""
-        cmd1 = ""
-        cmd2 = ""
-        cmd3 = ""
         retVal = None
         mosi_frame = ""
         miso_frame = ""
@@ -550,41 +594,40 @@ class Hla(HighLevelAnalyzer):
             self.decoder.set_mosi_miso_raw_data(self.frame_data_MOSI, self.frame_data_MISO)
 
             mosi_frame, miso_frame = self.decoder.get_mosi_miso_str()
-            miso_crc_group, mosi_crc_group = self.decoder.get_crc_group()
-            register_group = self.decoder.get_register_group()
+            miso_crc_group, mosi_crc_group, cmd_stat_4_bit_group = self.decoder.get_4_bit_crc_cmd_stat_group()
+            address_8bit_register_16bit_group, stat_8_bit_group = self.decoder.get_register_16_bit_address_stat_8_bit_group()
 
-            print(register_group)
-
+            
             if(( self.enable_time != None )and( self.disable_time != None )):
                 retVal = AnalyzerFrame('tmag5170', self.enable_time, self.disable_time, 
                                        {\
-                                            'mosi_frame':mosi_frame,                                                          \
-                                            'mosi_crc_calculated':int_to_hex_string(mosi_crc_group.crc_calculated),               \
-                                            'mosi_crc_from_bus':int_to_hex_string(mosi_crc_group.crc_from_bus),                   \
-                                            'crc_mosi_correct':mosi_crc_group.crc_status,                                        \
-                                            'miso_frame':miso_frame,                                                          \
-                                            'miso_crc_calculated':int_to_hex_string(miso_crc_group.crc_calculated),               \
-                                            'miso_crc_from_bus':int_to_hex_string(miso_crc_group.crc_from_bus),                   \
-                                            'crc_miso_correct':miso_crc_group.crc_status,                                        \
-                                            'read_write':register_group.read_write,                                                    \
-                                            'register_address':int_to_hex_string(register_group.register_address),                     \
-                                            'register_name':register_group.register_name,                                              \
-                                            'register_value':int_to_hex_string(register_group.register_value),                         \
-                                            'register_decoding':register_group.register_decoding,                                      \
-                                            'stat_2_0':stat_2_0,                                                        \
-                                            'error_stat':error_stat,                                                    \
-                                            't_stat':t_stat,                                                            \
-                                            'z_stat':z_stat,                                                            \
-                                            'y_stat':y_stat,                                                            \
-                                            'x_stat':x_stat,                                                            \
-                                            'afe_alrt_status0_stat':afe_alrt_status0_stat,                              \
-                                            'sys_alrt_status1_stat':sys_alrt_status1_stat,                              \
-                                            'cfg_reset_stat':cfg_reset_stat,                                            \
-                                            'prev_crc_stat':prev_crc_stat,                                              \
-                                            'cmd3':cmd3,                                                                \
-                                            'cmd2':cmd2,                                                                \
-                                            'cmd1':cmd1,                                                                \
-                                            'cmd0':cmd0,                                                                \
+                                            'mosi_frame':mosi_frame,                                                                        \
+                                            'mosi_crc_calculated':int_to_hex_string(mosi_crc_group.crc_calculated),                         \
+                                            'mosi_crc_from_bus':int_to_hex_string(mosi_crc_group.crc_from_bus),                             \
+                                            'crc_mosi_correct':mosi_crc_group.crc_status,                                                   \
+                                            'miso_frame':miso_frame,                                                                        \
+                                            'miso_crc_calculated':int_to_hex_string(miso_crc_group.crc_calculated),                         \
+                                            'miso_crc_from_bus':int_to_hex_string(miso_crc_group.crc_from_bus),                             \
+                                            'crc_miso_correct':miso_crc_group.crc_status,                                                   \
+                                            'read_write':address_8bit_register_16bit_group.read_write,                                      \
+                                            'register_address':int_to_hex_string(address_8bit_register_16bit_group.register_address),       \
+                                            'register_name':address_8bit_register_16bit_group.register_name,                                \
+                                            'register_value':int_to_hex_string(address_8bit_register_16bit_group.register_value),           \
+                                            'register_decoding':address_8bit_register_16bit_group.register_decoding,                        \
+                                            'stat_2_0':int_to_hex_string(cmd_stat_4_bit_group.stat_2_0),                                    \
+                                            'error_stat':int_to_hex_string(cmd_stat_4_bit_group.error_stat),                                \
+                                            't_stat':int_to_hex_string(stat_8_bit_group.t_stat),                                            \
+                                            'z_stat':int_to_hex_string(stat_8_bit_group.z_stat),                                            \
+                                            'y_stat':int_to_hex_string(stat_8_bit_group.y_stat),                                            \
+                                            'x_stat':int_to_hex_string(stat_8_bit_group.x_stat),                                            \
+                                            'afe_alrt_status0_stat':int_to_hex_string(stat_8_bit_group.afe_alrt_status0_stat),              \
+                                            'sys_alrt_status1_stat':int_to_hex_string(stat_8_bit_group.sys_alrt_status1_stat),              \
+                                            'cfg_reset_stat':int_to_hex_string(stat_8_bit_group.cfg_reset_stat),                            \
+                                            'prev_crc_stat':int_to_hex_string(stat_8_bit_group.prev_crc_stat),                              \
+                                            'cmd3':int_to_hex_string(cmd_stat_4_bit_group.cmd3),                                            \
+                                            'cmd2':int_to_hex_string(cmd_stat_4_bit_group.cmd2),                                            \
+                                            'cmd1':int_to_hex_string(cmd_stat_4_bit_group.cmd1),                                            \
+                                            'cmd0':int_to_hex_string(cmd_stat_4_bit_group.cmd0),                                            \
                                         })
             self.disable_time = None
             self.enable_time = None

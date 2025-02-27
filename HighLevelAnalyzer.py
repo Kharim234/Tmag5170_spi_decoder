@@ -251,19 +251,22 @@ class tmga5170_frame_decoder:
         T_LO_THRESHOLD_7_0  = uint8_to_int8(get_masked_value(data, 0, 0xFF))
         return f"[15-8] T_HI_THRESHOLD: {T_HI_THRESHOLD_15_8}, [7-0] T_LO_THRESHOLD: {T_LO_THRESHOLD_7_0}"
 
-    @staticmethod
-    def __X_CH_RESULT_DecodingFunction(data: int):
+    def __X_CH_RESULT_DecodingFunction(self, data: int):
         int_val = uint16_to_int16(data)
+        if self.conv_avg_equal_0 == True:
+            int_val = int_val >> 4
         return f"[15-0] X_CH_RESULT: {int_val}"
 
-    @staticmethod
-    def __Y_CH_RESULT_DecodingFunction(data: int):
+    def __Y_CH_RESULT_DecodingFunction(self, data: int):
         int_val = uint16_to_int16(data)
+        if self.conv_avg_equal_0 == True:
+            int_val = int_val >> 4
         return f"[15-0] Y_CH_RESULT: {int_val}"
 
-    @staticmethod
-    def __Z_CH_RESULT_DecodingFunction(data: int):
+    def __Z_CH_RESULT_DecodingFunction(self, data: int):
         int_val = uint16_to_int16(data)
+        if self.conv_avg_equal_0 == True:
+            int_val = int_val >> 4
         return f"[15-0] Z_CH_RESULT: {int_val}"
 
     @staticmethod
@@ -546,6 +549,8 @@ class Hla(HighLevelAnalyzer):
     CONV_AVG_NOT_EQUAL_O_STRING = "CONV_AVG != 0h, Note: X, Y, Z ch result is represented as 16 bits INT"
     CONV_AVG_EQUAL_O_STRING = "CONV_AVG = 0h, 1x - 10.0Ksps (3-axes) or 20Ksps (1 axis), Note: X, Y, Z ch result is represented as 12 bits INT"
     CONV_AVG = ChoicesSetting(choices=(CONV_AVG_NOT_EQUAL_O_STRING, CONV_AVG_EQUAL_O_STRING))
+
+
     enable_time = None
     disable_time = None
     frame_data_MISO = []
@@ -567,7 +572,7 @@ class Hla(HighLevelAnalyzer):
         }
     }
     
-    decoder = tmga5170_frame_decoder()
+    
 
     def __init__(self):
         '''
@@ -575,7 +580,14 @@ class Hla(HighLevelAnalyzer):
 
         Settings can be accessed using the same name used above.
         '''
-
+        if self.CONV_AVG == self.CONV_AVG_EQUAL_O_STRING:
+            self.conv_avg_equal_0 = True
+        elif self.CONV_AVG == self.CONV_AVG_NOT_EQUAL_O_STRING:
+            self.conv_avg_equal_0 = False
+        else:
+            raise Exception("Incorrect CONV_AVG settings") 
+            self.conv_avg_equal_0 = None
+        self.decoder = tmga5170_frame_decoder(conv_avg_equal_0 = self.conv_avg_equal_0)
         print("Settings:", self.DATA_TYPE,
               self.CRC_DIS)
 
@@ -597,7 +609,7 @@ class Hla(HighLevelAnalyzer):
         if(frame.type == "disable"):
             print("Disable stop time " + str(frame.end_time))
             self.disable_time = frame.start_time
-            print(str(self.frame_data_MOSI))
+
 
             self.decoder.set_mosi_miso_raw_data(self.frame_data_MOSI, self.frame_data_MISO)
 

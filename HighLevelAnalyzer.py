@@ -64,6 +64,7 @@ class tmga5170_frame_decoder:
     cmd_stat_4_bit_group_type = collections.namedtuple('cmd_stat_4_bit_group_type', ['cmd3', 'cmd2', 'cmd1', 'cmd0', 'error_stat', 'stat_2_0'])
     address_8bit_register_16bit_group_type = collections.namedtuple('address_8bit_register_16bit_group_type', ['read_write','register_address','register_name','register_decoding','register_value'])
     stat_8_bit_group_type = collections.namedtuple('stat_8_bit_group_type', ['prev_crc_stat','cfg_reset_stat','sys_alrt_status1_stat','afe_alrt_status0_stat','x_stat','y_stat','z_stat','t_stat'])
+    data_24_bit_group_type = collections.namedtuple('data_24_bit_group_type', ['read_write', 'ch1_value_str', 'ch2_value_str','register_address','register_name','register_decoding','register_value'])
 
     def __init__(self, enable__cmd_stat_4_bit_group = True, enable__stat_8_bit_group = True, crc_enabled = True, conv_avg_equal_0 = False, data_type_equal_0 = True):
         self.__Tmag5170_register_mapping = {
@@ -531,8 +532,37 @@ class tmga5170_frame_decoder:
             stat_8_bit_group = tmga5170_frame_decoder.stat_8_bit_group_type(None, None, None, None, None, None, None, None)
         return address_8bit_register_16bit_group, stat_8_bit_group
         
+    def get_24_bit_data_group(self):
+        ch1_value_str = ""
+        ch2_value_str = ""
+        register_address = None
+        register_name = None
+        register_decoding = ""
+        register_value = None
+        read_write = ""
 
+        if self.mosi_value != None:
+            if get_bit(self.mosi_value, READ_WRITE_BIT_POSITION) == 1:
+                read_write = READ_REGISTER_TOKEN
+            else:
+                read_write = WRITE_REGISTER_TOKEN
+                register_address = self.get_register_index_from_tmag5170_frame(self.mosi_value)
+                register_name = self.get_register_acronym(register_address)
+                register_value = tmga5170_frame_decoder.get_16_bit_spi_data_tmag5170(self.mosi_value)
+                register_decoding = self.get_register_decoded_description(register_address, self.mosi_value)
 
+        if self.miso_value != None:
+            first_4_bits = get_masked_value(self.miso_value, 8, 0x0F)
+            next_8_bits = get_masked_value(self.miso_value, 16, 0xFF)
+            all_12_bits = (next_8_bits<<8) | first_4_bits
+            ch1_value_str = int_to_hex_string(all_12_bits)
+
+            first_4_bits = get_masked_value(self.miso_value, 12, 0x0F)
+            next_8_bits = get_masked_value(self.miso_value, 24, 0xFF)
+            all_12_bits = (next_8_bits<<8) | first_4_bits
+            ch2_value_str = int_to_hex_string(all_12_bits)
+
+        return tmga5170_frame_decoder.data_24_bit_group_type(read_write, ch1_value_str, ch2_value_str, register_address, register_name, register_decoding, register_value)
 # High level analyzers must subclass the HighLevelAnalyzer class.
 class Hla(HighLevelAnalyzer):
 
@@ -616,6 +646,8 @@ class Hla(HighLevelAnalyzer):
             mosi_frame, miso_frame = self.decoder.get_mosi_miso_str()
             miso_crc_group, mosi_crc_group, cmd_stat_4_bit_group = self.decoder.get_4_bit_crc_cmd_stat_group()
             address_8bit_register_16bit_group, stat_8_bit_group = self.decoder.get_register_16_bit_address_stat_8_bit_group()
+            data_24_bit_group = self.decoder.get_24_bit_data_group()
+            print(data_24_bit_group)
 
             
             if(( self.enable_time != None )and( self.disable_time != None )):

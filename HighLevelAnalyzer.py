@@ -73,7 +73,7 @@ class tmga5170_frame_decoder:
     stat_8_bit_group_type = collections.namedtuple('stat_8_bit_group_type', ['prev_crc_stat','cfg_reset_stat','sys_alrt_status1_stat','afe_alrt_status0_stat','x_stat','y_stat','z_stat','t_stat'])
     data_24_bit_group_type = collections.namedtuple('data_24_bit_group_type', ['read_write', 'ch1_value', 'ch2_value','register_address','register_name','register_decoding','register_value'])
 
-    def __init__(self, enable__cmd_stat_4_bit_group = True, enable__stat_8_bit_group = True, crc_enabled = True, data_type = DataType.default_32bit_access):
+    def __init__(self, enable__cmd_stat_4_bit_group = True, enable__stat_8_bit_group = True, crc_enabled = True, data_type: DataType  = DataType.default_32bit_access):
         self.__Tmag5170_register_mapping = {
             0x00: self.__tmag5170_mapping_type("DEVICE_CONFIG"    ,    self.__DEVICE_CONFIG_DecodingFunction)     ,
             0x01: self.__tmag5170_mapping_type("SENSOR_CONFIG"    ,    self.__SENSOR_CONFIG_DecodingFunction)     ,
@@ -605,7 +605,19 @@ class Hla(HighLevelAnalyzer):
 
     # An optional list of types this analyzer produces, providing a way to customize the way frames are displayed in Logic 2.
     result_types = {
-        'tmag5170': {
+        'tmag5170_regular': {
+            'format': \
+            'MOSI:{{data.mosi}}, \
+            crc_mosi_expected: {{data.mosi_crc_calculated}},\
+            {{data.crc_mosi_correct}}, \
+            R/W:{{data.read_write}}, \
+            RegAddr:{{data.register_address}} - {{data.register_name}}, \
+            \nMISO:{{data.miso}}, \
+            crc_miso_expected: {{data.miso_crc_calculated}},\
+            {{data.crc_miso_correct}},\
+            decoded_reg_val:{{data.register_decoding}}'
+        },
+        'tmag5170_special': {
             'format': \
             'MOSI:{{data.mosi}}, \
             crc_mosi_expected: {{data.mosi_crc_calculated}},\
@@ -680,7 +692,7 @@ class Hla(HighLevelAnalyzer):
 
             
             if(( self.enable_time != None )and( self.disable_time != None )):
-                retVal = AnalyzerFrame('tmag5170', self.enable_time, self.disable_time, 
+                retVal = AnalyzerFrame('tmag5170_regular', self.enable_time, self.disable_time, 
                                        {\
                                             'mosi_frame':mosi_frame,                                                                        \
                                             'mosi_crc_calculated':int_to_hex_string(mosi_crc_group.crc_calculated),                         \

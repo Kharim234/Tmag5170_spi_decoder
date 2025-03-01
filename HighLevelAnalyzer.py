@@ -58,7 +58,8 @@ def int_to_hex_string(value:int, leadingZeros:int = 0):
     if value == None:
         return ""
     else:
-        return f"{value:#0{leadingZeros}x}"
+        hex_string = f"{value:X}"
+        return f"0x{hex_string:0>{leadingZeros}}"
     
 def int_none_verificatio(value:int):
     if value == None:
@@ -410,7 +411,7 @@ class tmga5170_frame_decoder:
     @staticmethod
     def convert_uint_to_mosi_miso_str(value: int):
         if value != None:
-            str_value = int_to_hex_string(value, 10)
+            str_value = int_to_hex_string(value, 8)
         else:
             str_value = LENGTH_ERROR_TOKEN
         return str_value
@@ -682,7 +683,7 @@ class Hla(HighLevelAnalyzer):
                         'read_write':read_write,                                                                            \
                         'register_address':int_none_verificatio(address_8bit_register_16bit_group.register_address),        \
                         'register_name':register_name,                                                                      \
-                        'register_value':int_to_hex_string(address_8bit_register_16bit_group.register_value, 6),            \
+                        'register_value':int_to_hex_string(address_8bit_register_16bit_group.register_value, 4),            \
                         'register_decoding':address_8bit_register_16bit_group.register_decoding,                            \
                         'stat_2_0':int_none_verificatio(cmd_stat_4_bit_group.stat_2_0),                                     \
                         'error_stat':int_none_verificatio(cmd_stat_4_bit_group.error_stat),                                 \
@@ -719,7 +720,7 @@ class Hla(HighLevelAnalyzer):
                         'read_write':read_write,                                                                            \
                         'register_address':int_none_verificatio(data_24_bit_group.register_address),                        \
                         'register_name':register_name,                                                                      \
-                        'register_value':int_to_hex_string(data_24_bit_group.register_value, 6),                            \
+                        'register_value':int_to_hex_string(data_24_bit_group.register_value, 4),                            \
                         'register_decoding':data_24_bit_group.register_decoding,                                            \
                         'ch1_value':data_24_bit_group.ch1_value,                                                            \
                         'ch2_value':data_24_bit_group.ch2_value,                                                            \

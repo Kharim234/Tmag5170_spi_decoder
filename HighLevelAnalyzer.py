@@ -54,11 +54,12 @@ def uintX_to_intX_represented_on_Y_bytes (in_value: int, size_of_in_value: int, 
         int_val = int.from_bytes(byte_value, 'big', signed = True)
     return (int_val)
 
-def int_to_hex_string(value:int):
+def int_to_hex_string(value:int, leadingZeros:int = 0):
     if value == None:
         return ""
     else:
-        return hex(value).upper().replace('X', 'x')
+        #return hex(value).upper().replace('X', 'x')
+        return f"{value:#0{leadingZeros}x}"
 class tmga5170_frame_decoder:
     class DataType(Enum):
         default_32bit_access = 0
@@ -404,7 +405,7 @@ class tmga5170_frame_decoder:
     @staticmethod
     def convert_uint_to_mosi_miso_str(value: int):
         if value != None:
-            str_value = int_to_hex_string(value)
+            str_value = int_to_hex_string(value, 10)
         else:
             str_value = LENGTH_ERROR_TOKEN
         return str_value
@@ -665,9 +666,9 @@ class Hla(HighLevelAnalyzer):
                         'miso_crc_from_bus':int_to_hex_string(miso_crc_group.crc_from_bus),                             \
                         'crc_miso_correct':miso_crc_group.crc_status,                                                   \
                         'read_write':address_8bit_register_16bit_group.read_write,                                      \
-                        'register_address':int_to_hex_string(address_8bit_register_16bit_group.register_address),       \
+                        'register_address':int_to_hex_string(address_8bit_register_16bit_group.register_address, 4),    \
                         'register_name':address_8bit_register_16bit_group.register_name,                                \
-                        'register_value':int_to_hex_string(address_8bit_register_16bit_group.register_value),           \
+                        'register_value':int_to_hex_string(address_8bit_register_16bit_group.register_value, 6),        \
                         'register_decoding':address_8bit_register_16bit_group.register_decoding,                        \
                         'stat_2_0':int_to_hex_string(cmd_stat_4_bit_group.stat_2_0),                                    \
                         'error_stat':int_to_hex_string(cmd_stat_4_bit_group.error_stat),                                \
@@ -683,6 +684,7 @@ class Hla(HighLevelAnalyzer):
                         'cmd2':int_to_hex_string(cmd_stat_4_bit_group.cmd2),                                            \
                         'cmd1':int_to_hex_string(cmd_stat_4_bit_group.cmd1),                                            \
                         'cmd0':int_to_hex_string(cmd_stat_4_bit_group.cmd0),                                            \
+                        'FrameCnt_debug':self.counter,                                                                  \
                 }
                 
             else:
@@ -699,9 +701,9 @@ class Hla(HighLevelAnalyzer):
                         'miso_crc_from_bus':int_to_hex_string(miso_crc_group.crc_from_bus),                             \
                         'crc_miso_correct':miso_crc_group.crc_status,                                                   \
                         'read_write':data_24_bit_group.read_write,                                                      \
-                        'register_address':int_to_hex_string(data_24_bit_group.register_address),                       \
+                        'register_address':int_to_hex_string(data_24_bit_group.register_address, 4),                    \
                         'register_name':data_24_bit_group.register_name,                                                \
-                        'register_value':int_to_hex_string(data_24_bit_group.register_value),                           \
+                        'register_value':int_to_hex_string(data_24_bit_group.register_value, 6),                        \
                         'register_decoding':data_24_bit_group.register_decoding,                                        \
                         'ch1_value':data_24_bit_group.ch1_value,                                                        \
                         'ch2_value':data_24_bit_group.ch2_value,                                                        \
@@ -711,9 +713,10 @@ class Hla(HighLevelAnalyzer):
                         'cmd2':int_to_hex_string(cmd_stat_4_bit_group.cmd2),                                            \
                         'cmd1':int_to_hex_string(cmd_stat_4_bit_group.cmd1),                                            \
                         'cmd0':int_to_hex_string(cmd_stat_4_bit_group.cmd0),                                            \
+                        'FrameCnt_debug':self.counter,                                                                  \
                 }
             retVal = AnalyzerFrame(AnalyzerFrameType, self.start_frame_label_time, self.end_frame_label_time, AnalyzerFrameDictionary)
-            print(f"Cnt: {self.counter: >6}, FrameType: {AnalyzerFrameType: >15}, MOSI: {mosi_frame: >10}, MOSI_CRC: {mosi_crc_group.crc_status: >6}, MISO: {miso_frame: >10}, MISO_CRC: {miso_crc_group.crc_status: >6}")
+            print(f"FrameCnt_debug: {self.counter: >6}, Type: {AnalyzerFrameType: >15}, MOSI: {mosi_frame: >10}, MOSI_CRC: {mosi_crc_group.crc_status: >6}, MISO: {miso_frame: >10}, MISO_CRC: {miso_crc_group.crc_status: >6}")
             self.counter = self.counter + 1
             self.end_frame_label_time = None
             self.start_frame_label_time = None

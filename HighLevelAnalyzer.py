@@ -733,7 +733,7 @@ class Hla(HighLevelAnalyzer):
                         'FrameCnt_debug':self.counter,                                                                      \
                 }
             retVal = AnalyzerFrame(AnalyzerFrameType, self.start_frame_label_time, self.end_frame_label_time, AnalyzerFrameDictionary)
-            print(f"FrameCnt_debug: {self.counter: >6}, mosi_f: {mosi_frame: >10}, crc_mosi: {mosi_crc_group.crc_status: >6}, miso_f: {miso_frame: >10}, crc_miso: {miso_crc_group.crc_status: >6}, read_write: {read_write: >6} reg name:{register_name}")
+            print(f"FrameCnt_debug: {self.counter: >6}, mosi_f: {mosi_frame: >10}, crc_mosi: {mosi_crc_group.crc_status: >{len(CRC_ERROR_TOKEN)}}, miso_f: {miso_frame: >10}, crc_miso: {miso_crc_group.crc_status: >{len(CRC_ERROR_TOKEN)}}, read_write: {read_write: >6} reg name:{register_name}")
             self.counter = self.counter + 1
             self.end_frame_label_time = None
             self.start_frame_label_time = None

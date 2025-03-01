@@ -58,8 +58,13 @@ def int_to_hex_string(value:int, leadingZeros:int = 0):
     if value == None:
         return ""
     else:
-        #return hex(value).upper().replace('X', 'x')
         return f"{value:#0{leadingZeros}x}"
+    
+def int_none_verificatio(value:int):
+    if value == None:
+        return ""
+    else:
+        return value
 class tmga5170_frame_decoder:
     class DataType(Enum):
         default_32bit_access = 0
@@ -595,9 +600,10 @@ class Hla(HighLevelAnalyzer):
             R/W:{{data.read_write}}, \
             RegAddr:{{data.register_address}} - {{data.register_name}}, \
             \nMISO:{{data.miso}}, \
-            crc_miso_expected: {{data.miso_crc_calculated}},\
-            {{data.crc_miso_correct}},\
-            decoded_reg_val:{{data.register_decoding}}'
+            crc_miso_expected: {{data.miso_crc_calculated}}, \
+            {{data.crc_miso_correct}}, \
+            decoded_reg_val:{{data.register_decoding}}, \
+            FrameCnt_debug:{{data.FrameCnt_debug}}'\
         },
         'tmag5170_special': {
             'format': \
@@ -605,8 +611,14 @@ class Hla(HighLevelAnalyzer):
             crc_mosi_expected: {{data.mosi_crc_calculated}},\
             {{data.crc_mosi_correct}}, \
             \nMISO:{{data.miso}}, \
-            crc_miso_expected: {{data.miso_crc_calculated}},\
-            {{data.crc_miso_correct}}'
+            crc_miso_expected: {{data.miso_crc_calculated}}, \
+            {{data.crc_miso_correct}}, \
+            ch1_value:{{data.ch1_value}}, \
+            ch2_value:{{data.ch2_value}}, \
+            R/W:{{data.read_write}}, \
+            RegAddr:{{data.register_address}} - {{data.register_name}}, \
+            decoded_reg_val:{{data.register_decoding}}, \
+            FrameCnt_debug:{{data.FrameCnt_debug}}'\
         }
     }
     
@@ -654,69 +666,73 @@ class Hla(HighLevelAnalyzer):
 
             if self.DATA_TYPE == self.DATA_TYPE_EQUAL_O_STRING:
                 address_8bit_register_16bit_group, stat_8_bit_group = self.decoder.get_register_16_bit_address_stat_8_bit_group()
+                read_write = address_8bit_register_16bit_group.read_write
+                register_name = address_8bit_register_16bit_group.register_name
 
                 AnalyzerFrameType = 'tmag5170_regular'
                 AnalyzerFrameDictionary = {\
-                        'mosi_frame':mosi_frame,                                                                        \
-                        'mosi_crc_calculated':int_to_hex_string(mosi_crc_group.crc_calculated),                         \
-                        'mosi_crc_from_bus':int_to_hex_string(mosi_crc_group.crc_from_bus),                             \
-                        'crc_mosi_correct':mosi_crc_group.crc_status,                                                   \
-                        'miso_frame':miso_frame,                                                                        \
-                        'miso_crc_calculated':int_to_hex_string(miso_crc_group.crc_calculated),                         \
-                        'miso_crc_from_bus':int_to_hex_string(miso_crc_group.crc_from_bus),                             \
-                        'crc_miso_correct':miso_crc_group.crc_status,                                                   \
-                        'read_write':address_8bit_register_16bit_group.read_write,                                      \
-                        'register_address':int_to_hex_string(address_8bit_register_16bit_group.register_address, 4),    \
-                        'register_name':address_8bit_register_16bit_group.register_name,                                \
-                        'register_value':int_to_hex_string(address_8bit_register_16bit_group.register_value, 6),        \
-                        'register_decoding':address_8bit_register_16bit_group.register_decoding,                        \
-                        'stat_2_0':int_to_hex_string(cmd_stat_4_bit_group.stat_2_0),                                    \
-                        'error_stat':int_to_hex_string(cmd_stat_4_bit_group.error_stat),                                \
-                        't_stat':int_to_hex_string(stat_8_bit_group.t_stat),                                            \
-                        'z_stat':int_to_hex_string(stat_8_bit_group.z_stat),                                            \
-                        'y_stat':int_to_hex_string(stat_8_bit_group.y_stat),                                            \
-                        'x_stat':int_to_hex_string(stat_8_bit_group.x_stat),                                            \
-                        'afe_alrt_status0_stat':int_to_hex_string(stat_8_bit_group.afe_alrt_status0_stat),              \
-                        'sys_alrt_status1_stat':int_to_hex_string(stat_8_bit_group.sys_alrt_status1_stat),              \
-                        'cfg_reset_stat':int_to_hex_string(stat_8_bit_group.cfg_reset_stat),                            \
-                        'prev_crc_stat':int_to_hex_string(stat_8_bit_group.prev_crc_stat),                              \
-                        'cmd3':int_to_hex_string(cmd_stat_4_bit_group.cmd3),                                            \
-                        'cmd2':int_to_hex_string(cmd_stat_4_bit_group.cmd2),                                            \
-                        'cmd1':int_to_hex_string(cmd_stat_4_bit_group.cmd1),                                            \
-                        'cmd0':int_to_hex_string(cmd_stat_4_bit_group.cmd0),                                            \
-                        'FrameCnt_debug':self.counter,                                                                  \
+                        'mosi_frame':mosi_frame,                                                                            \
+                        'mosi_crc_calculated':int_to_hex_string(mosi_crc_group.crc_calculated),                             \
+                        'mosi_crc_from_bus':int_to_hex_string(mosi_crc_group.crc_from_bus),                                 \
+                        'crc_mosi_correct':mosi_crc_group.crc_status,                                                       \
+                        'miso_frame':miso_frame,                                                                            \
+                        'miso_crc_calculated':int_to_hex_string(miso_crc_group.crc_calculated),                             \
+                        'miso_crc_from_bus':int_to_hex_string(miso_crc_group.crc_from_bus),                                 \
+                        'crc_miso_correct':miso_crc_group.crc_status,                                                       \
+                        'read_write':read_write,                                                                            \
+                        'register_address':int_none_verificatio(address_8bit_register_16bit_group.register_address),        \
+                        'register_name':register_name,                                                                      \
+                        'register_value':int_to_hex_string(address_8bit_register_16bit_group.register_value, 6),            \
+                        'register_decoding':address_8bit_register_16bit_group.register_decoding,                            \
+                        'stat_2_0':int_none_verificatio(cmd_stat_4_bit_group.stat_2_0),                                     \
+                        'error_stat':int_none_verificatio(cmd_stat_4_bit_group.error_stat),                                 \
+                        't_stat':int_none_verificatio(stat_8_bit_group.t_stat),                                             \
+                        'z_stat':int_none_verificatio(stat_8_bit_group.z_stat),                                             \
+                        'y_stat':int_none_verificatio(stat_8_bit_group.y_stat),                                             \
+                        'x_stat':int_none_verificatio(stat_8_bit_group.x_stat),                                             \
+                        'afe_alrt_status0_stat':int_none_verificatio(stat_8_bit_group.afe_alrt_status0_stat),               \
+                        'sys_alrt_status1_stat':int_none_verificatio(stat_8_bit_group.sys_alrt_status1_stat),               \
+                        'cfg_reset_stat':int_none_verificatio(stat_8_bit_group.cfg_reset_stat),                             \
+                        'prev_crc_stat':int_none_verificatio(stat_8_bit_group.prev_crc_stat),                               \
+                        'cmd3':int_none_verificatio(cmd_stat_4_bit_group.cmd3),                                             \
+                        'cmd2':int_none_verificatio(cmd_stat_4_bit_group.cmd2),                                             \
+                        'cmd1':int_none_verificatio(cmd_stat_4_bit_group.cmd1),                                             \
+                        'cmd0':int_none_verificatio(cmd_stat_4_bit_group.cmd0),                                             \
+                        'FrameCnt_debug':self.counter,                                                                      \
                 }
                 
             else:
                 data_24_bit_group = self.decoder.get_24_bit_data_group()
+                read_write = data_24_bit_group.read_write
+                register_name = data_24_bit_group.register_name
 
                 AnalyzerFrameType = 'tmag5170_special'
                 AnalyzerFrameDictionary = {\
-                        'mosi_frame':mosi_frame,                                                                        \
-                        'mosi_crc_calculated':int_to_hex_string(mosi_crc_group.crc_calculated),                         \
-                        'mosi_crc_from_bus':int_to_hex_string(mosi_crc_group.crc_from_bus),                             \
-                        'crc_mosi_correct':mosi_crc_group.crc_status,                                                   \
-                        'miso_frame':miso_frame,                                                                        \
-                        'miso_crc_calculated':int_to_hex_string(miso_crc_group.crc_calculated),                         \
-                        'miso_crc_from_bus':int_to_hex_string(miso_crc_group.crc_from_bus),                             \
-                        'crc_miso_correct':miso_crc_group.crc_status,                                                   \
-                        'read_write':data_24_bit_group.read_write,                                                      \
-                        'register_address':int_to_hex_string(data_24_bit_group.register_address, 4),                    \
-                        'register_name':data_24_bit_group.register_name,                                                \
-                        'register_value':int_to_hex_string(data_24_bit_group.register_value, 6),                        \
-                        'register_decoding':data_24_bit_group.register_decoding,                                        \
-                        'ch1_value':data_24_bit_group.ch1_value,                                                        \
-                        'ch2_value':data_24_bit_group.ch2_value,                                                        \
-                        'stat_2_0':int_to_hex_string(cmd_stat_4_bit_group.stat_2_0),                                    \
-                        'error_stat':int_to_hex_string(cmd_stat_4_bit_group.error_stat),                                \
-                        'cmd3':int_to_hex_string(cmd_stat_4_bit_group.cmd3),                                            \
-                        'cmd2':int_to_hex_string(cmd_stat_4_bit_group.cmd2),                                            \
-                        'cmd1':int_to_hex_string(cmd_stat_4_bit_group.cmd1),                                            \
-                        'cmd0':int_to_hex_string(cmd_stat_4_bit_group.cmd0),                                            \
-                        'FrameCnt_debug':self.counter,                                                                  \
+                        'mosi_frame':mosi_frame,                                                                            \
+                        'mosi_crc_calculated':int_to_hex_string(mosi_crc_group.crc_calculated),                             \
+                        'mosi_crc_from_bus':int_to_hex_string(mosi_crc_group.crc_from_bus),                                 \
+                        'crc_mosi_correct':mosi_crc_group.crc_status,                                                       \
+                        'miso_frame':miso_frame,                                                                            \
+                        'miso_crc_calculated':int_to_hex_string(miso_crc_group.crc_calculated),                             \
+                        'miso_crc_from_bus':int_to_hex_string(miso_crc_group.crc_from_bus),                                 \
+                        'crc_miso_correct':miso_crc_group.crc_status,                                                       \
+                        'read_write':read_write,                                                                            \
+                        'register_address':int_none_verificatio(data_24_bit_group.register_address),                        \
+                        'register_name':register_name,                                                                      \
+                        'register_value':int_to_hex_string(data_24_bit_group.register_value, 6),                            \
+                        'register_decoding':data_24_bit_group.register_decoding,                                            \
+                        'ch1_value':data_24_bit_group.ch1_value,                                                            \
+                        'ch2_value':data_24_bit_group.ch2_value,                                                            \
+                        'stat_2_0':int_none_verificatio(cmd_stat_4_bit_group.stat_2_0),                                     \
+                        'error_stat':int_none_verificatio(cmd_stat_4_bit_group.error_stat),                                 \
+                        'cmd3':int_none_verificatio(cmd_stat_4_bit_group.cmd3),                                             \
+                        'cmd2':int_none_verificatio(cmd_stat_4_bit_group.cmd2),                                             \
+                        'cmd1':int_none_verificatio(cmd_stat_4_bit_group.cmd1),                                             \
+                        'cmd0':int_none_verificatio(cmd_stat_4_bit_group.cmd0),                                             \
+                        'FrameCnt_debug':self.counter,                                                                      \
                 }
             retVal = AnalyzerFrame(AnalyzerFrameType, self.start_frame_label_time, self.end_frame_label_time, AnalyzerFrameDictionary)
-            print(f"FrameCnt_debug: {self.counter: >6}, Type: {AnalyzerFrameType: >15}, MOSI: {mosi_frame: >10}, MOSI_CRC: {mosi_crc_group.crc_status: >6}, MISO: {miso_frame: >10}, MISO_CRC: {miso_crc_group.crc_status: >6}")
+            print(f"FrameCnt_debug: {self.counter: >6}, mosi_f: {mosi_frame: >10}, crc_mosi: {mosi_crc_group.crc_status: >6}, miso_f: {miso_frame: >10}, crc_miso: {miso_crc_group.crc_status: >6}, read_write: {read_write: >6} reg name:{register_name}")
             self.counter = self.counter + 1
             self.end_frame_label_time = None
             self.start_frame_label_time = None

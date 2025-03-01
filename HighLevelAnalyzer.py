@@ -389,33 +389,19 @@ class tmga5170_frame_decoder:
         return value
 
     @staticmethod 
-    def convert_tmag5170_bytes_to_int (data, start_position: int):
+    def convert_tmag5170_bytes_to_int (data):
         value = None
-        length = len(data)
-        if ((length - start_position) >= TMAG5170_SINGLE_FRAME_BYTE_SIZE):
+        if (len(data) == TMAG5170_SINGLE_FRAME_BYTE_SIZE):
             print("data")
             print(data)
-
-            data_sliced = data[start_position:(start_position + TMAG5170_SINGLE_FRAME_BYTE_SIZE)]
-            print("data_sliced")
-            print(data_sliced)
-            data_joined = b''.join(data_sliced)
-            value = int.from_bytes(data_joined, 'big', signed = False) 
+            value = int.from_bytes(data, 'big', signed = False) 
         return value
 
 
 
     def set_mosi_miso_raw_data(self, mosi_raw_data, miso_raw_data):
-
-        if(len(mosi_raw_data) == TMAG5170_SINGLE_FRAME_BYTE_SIZE):
-            self.mosi_value = tmga5170_frame_decoder.convert_tmag5170_bytes_to_int(mosi_raw_data, 0)
-        else:
-            self.mosi_value = None
-
-        if(len(miso_raw_data) == TMAG5170_SINGLE_FRAME_BYTE_SIZE):
-            self.miso_value = tmga5170_frame_decoder.convert_tmag5170_bytes_to_int(miso_raw_data, 0)
-        else:
-            self.miso_value = None
+            self.mosi_value = tmga5170_frame_decoder.convert_tmag5170_bytes_to_int(mosi_raw_data)
+            self.miso_value = tmga5170_frame_decoder.convert_tmag5170_bytes_to_int(miso_raw_data)
 
     @staticmethod
     def convert_uint_to_mosi_miso_str(value: int):
@@ -598,10 +584,8 @@ class Hla(HighLevelAnalyzer):
     CRC_DIS = ChoicesSetting(choices=(CRC_EN_STRING,CRC_DIS_STRING))
 
 
-    enable_time = None
-    disable_time = None
-    frame_data_MISO = []
-    frame_data_MOSI = []
+
+
 
     # An optional list of types this analyzer produces, providing a way to customize the way frames are displayed in Logic 2.
     result_types = {
@@ -659,36 +643,19 @@ class Hla(HighLevelAnalyzer):
         print("Settings:", self.DATA_TYPE,
               self.CRC_DIS)
 
+        self.frame_data_MISO = bytearray(b'')
+        self.frame_data_MOSI = bytearray(b'')
+        self.enable_time = None
+        self.disable_time = None
 
-    def decode(self, frame: AnalyzerFrame):
-        '''
-        Process a frame from the input analyzer, and optionally return a single `AnalyzerFrame` or a list of `AnalyzerFrame`s.
-
-        The type and data values in `frame` will depend on the input analyzer.
-        '''
-
-        retVal = None
-        mosi_frame = ""
-        miso_frame = ""
-
-        if(frame.type == "enable"):
-            print("Enable start time " + str(frame.start_time))
-            self.enable_time = frame.start_time
-        if(frame.type == "disable"):
-            print("Disable stop time " + str(frame.end_time))
-            self.disable_time = frame.start_time
-
-
-            self.decoder.set_mosi_miso_raw_data(self.frame_data_MOSI, self.frame_data_MISO)
+    def generateAnalyzerFrame(self):
 
             mosi_frame, miso_frame = self.decoder.get_mosi_miso_str()
             miso_crc_group, mosi_crc_group, cmd_stat_4_bit_group = self.decoder.get_4_bit_crc_cmd_stat_group()
-            address_8bit_register_16bit_group, stat_8_bit_group = self.decoder.get_register_16_bit_address_stat_8_bit_group()
-            data_24_bit_group = self.decoder.get_24_bit_data_group()
-            print(data_24_bit_group)
 
-            
-            if self.decoder.data_type == tmga5170_frame_decoder.DataType.default_32bit_access:
+            if self.DATA_TYPE == self.DATA_TYPE_EQUAL_O_STRING:
+                address_8bit_register_16bit_group, stat_8_bit_group = self.decoder.get_register_16_bit_address_stat_8_bit_group()
+
                 AnalyzerFrameType = 'tmag5170_regular'
                 AnalyzerFrameDictionary = {\
                         'mosi_frame':mosi_frame,                                                                        \
@@ -721,6 +688,8 @@ class Hla(HighLevelAnalyzer):
                 }
                 
             else:
+                data_24_bit_group = self.decoder.get_24_bit_data_group()
+
                 AnalyzerFrameType = 'tmag5170_special'
                 AnalyzerFrameDictionary = {\
                         'mosi_frame':mosi_frame,                                                                        \
@@ -748,13 +717,33 @@ class Hla(HighLevelAnalyzer):
             retVal = AnalyzerFrame(AnalyzerFrameType, self.enable_time, self.disable_time, AnalyzerFrameDictionary)
             self.disable_time = None
             self.enable_time = None
-            self.frame_data_MISO = []
-            self.frame_data_MOSI = []
+            self.frame_data_MISO = bytearray(b'')
+            self.frame_data_MOSI = bytearray(b'')
+            return retVal
+
+    def decode(self, frame: AnalyzerFrame):
+        '''
+        Process a frame from the input analyzer, and optionally return a single `AnalyzerFrame` or a list of `AnalyzerFrame`s.
+
+        The type and data values in `frame` will depend on the input analyzer.
+        '''
+
+        retVal = None
+
+        if(frame.type == "enable"):
+            print("Enable start time " + str(frame.start_time))
+            self.enable_time = frame.start_time
+        if(frame.type == "disable"):
+            print("Disable stop time " + str(frame.end_time))
+            self.disable_time = frame.start_time
+            self.decoder.set_mosi_miso_raw_data(self.frame_data_MOSI, self.frame_data_MISO)
+            retVal = self.generateAnalyzerFrame()
+
             
 
         if(frame.type == "result"):
-            self.frame_data_MISO.append(frame.data['miso'])
-            self.frame_data_MOSI.append(frame.data['mosi'])
+            self.frame_data_MISO += frame.data['miso']
+            self.frame_data_MOSI += frame.data['mosi']
             print("MISO " + str(frame.data['miso']))
             print("MOSI " + str(frame.data['mosi']))
         print("frame.type " + str(frame.type))

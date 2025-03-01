@@ -392,8 +392,6 @@ class tmga5170_frame_decoder:
     def convert_tmag5170_bytes_to_int (data):
         value = None
         if (len(data) == TMAG5170_SINGLE_FRAME_BYTE_SIZE):
-            print("data")
-            print(data)
             value = int.from_bytes(data, 'big', signed = False) 
         return value
 
@@ -548,7 +546,6 @@ class tmga5170_frame_decoder:
             first_4_bits_ch2 = get_masked_value(self.miso_value, 12, 0x0F)
             next_8_bits_ch2 = get_masked_value(self.miso_value, 24, 0xFF)
             all_12_bits_ch2 = (next_8_bits_ch2<<8) | first_4_bits_ch2
-            print(self.data_type)
             if self.data_type == self.DataType.magnetic_field:
                 ch1_value = uintX_to_intX_represented_on_Y_bytes(all_12_bits_ch1, 12, 2)
                 ch2_value = uintX_to_intX_represented_on_Y_bytes(all_12_bits_ch2, 12, 2)
@@ -645,8 +642,9 @@ class Hla(HighLevelAnalyzer):
 
         self.frame_data_MISO = bytearray(b'')
         self.frame_data_MOSI = bytearray(b'')
-        self.enable_time = None
-        self.disable_time = None
+        self.start_frame_label_time = None
+        self.end_frame_label_time = None
+        self.counter = 0
 
     def generateAnalyzerFrame(self):
 
@@ -700,13 +698,13 @@ class Hla(HighLevelAnalyzer):
                         'miso_crc_calculated':int_to_hex_string(miso_crc_group.crc_calculated),                         \
                         'miso_crc_from_bus':int_to_hex_string(miso_crc_group.crc_from_bus),                             \
                         'crc_miso_correct':miso_crc_group.crc_status,                                                   \
-                        'read_write':data_24_bit_group.read_write,                                      \
-                        'register_address':int_to_hex_string(data_24_bit_group.register_address),       \
-                        'register_name':data_24_bit_group.register_name,                                \
-                        'register_value':int_to_hex_string(data_24_bit_group.register_value),           \
-                        'register_decoding':data_24_bit_group.register_decoding,                        \
-                        'ch1_value':data_24_bit_group.ch1_value,                        \
-                        'ch2_value':data_24_bit_group.ch2_value,                        \
+                        'read_write':data_24_bit_group.read_write,                                                      \
+                        'register_address':int_to_hex_string(data_24_bit_group.register_address),                       \
+                        'register_name':data_24_bit_group.register_name,                                                \
+                        'register_value':int_to_hex_string(data_24_bit_group.register_value),                           \
+                        'register_decoding':data_24_bit_group.register_decoding,                                        \
+                        'ch1_value':data_24_bit_group.ch1_value,                                                        \
+                        'ch2_value':data_24_bit_group.ch2_value,                                                        \
                         'stat_2_0':int_to_hex_string(cmd_stat_4_bit_group.stat_2_0),                                    \
                         'error_stat':int_to_hex_string(cmd_stat_4_bit_group.error_stat),                                \
                         'cmd3':int_to_hex_string(cmd_stat_4_bit_group.cmd3),                                            \
@@ -714,9 +712,11 @@ class Hla(HighLevelAnalyzer):
                         'cmd1':int_to_hex_string(cmd_stat_4_bit_group.cmd1),                                            \
                         'cmd0':int_to_hex_string(cmd_stat_4_bit_group.cmd0),                                            \
                 }
-            retVal = AnalyzerFrame(AnalyzerFrameType, self.enable_time, self.disable_time, AnalyzerFrameDictionary)
-            self.disable_time = None
-            self.enable_time = None
+            retVal = AnalyzerFrame(AnalyzerFrameType, self.start_frame_label_time, self.end_frame_label_time, AnalyzerFrameDictionary)
+            print(f"Cnt: {self.counter: >6}, FrameType: {AnalyzerFrameType: >15}, MOSI: {mosi_frame: >10}, MOSI_CRC: {mosi_crc_group.crc_status: >6}, MISO: {miso_frame: >10}, MISO_CRC: {miso_crc_group.crc_status: >6}")
+            self.counter = self.counter + 1
+            self.end_frame_label_time = None
+            self.start_frame_label_time = None
             self.frame_data_MISO = bytearray(b'')
             self.frame_data_MOSI = bytearray(b'')
             return retVal
@@ -729,24 +729,26 @@ class Hla(HighLevelAnalyzer):
         '''
 
         retVal = None
-
+        
         if(frame.type == "enable"):
-            print("Enable start time " + str(frame.start_time))
-            self.enable_time = frame.start_time
+            self.start_frame_label_time = frame.start_time
+
         if(frame.type == "disable"):
-            print("Disable stop time " + str(frame.end_time))
-            self.disable_time = frame.start_time
+            self.end_frame_label_time = frame.start_time
             self.decoder.set_mosi_miso_raw_data(self.frame_data_MOSI, self.frame_data_MISO)
             retVal = self.generateAnalyzerFrame()
 
-            
 
         if(frame.type == "result"):
+            if self.CRC_DIS == self.CRC_DIS_STRING:
+                if (len(self.frame_data_MISO) == TMAG5170_SINGLE_FRAME_BYTE_SIZE) or (len(self.frame_data_MOSI) == TMAG5170_SINGLE_FRAME_BYTE_SIZE):
+                    self.end_frame_label_time = frame.start_time
+                    retVal = self.generateAnalyzerFrame()
+                    self.start_frame_label_time = frame.start_time
+
             self.frame_data_MISO += frame.data['miso']
             self.frame_data_MOSI += frame.data['mosi']
-            print("MISO " + str(frame.data['miso']))
-            print("MOSI " + str(frame.data['mosi']))
-        print("frame.type " + str(frame.type))
+
         # Return the data frame itself
         return retVal
 

@@ -43,14 +43,14 @@ def uint8_to_int8 (in_value: int) -> int:
     int_val = int.from_bytes(value, 'big', signed = True)
     return (int_val)
 
-def uintX_to_intX_represented_on_8_bits (in_value: int, size_of_in_value: int) -> int:
+def uintX_to_intX_represented_on_Y_bytes (in_value: int, size_of_in_value: int, out_bytes_count: int,) -> int:
     int_val = None
-    if size_of_in_value <= 8 and size_of_in_value>0:
+    if out_bytes_count > 0 and size_of_in_value > 0:
         value = in_value
         sign_bit = get_bit(in_value, size_of_in_value - 1)
-        for i in range((size_of_in_value),8):
+        for i in range((size_of_in_value),(out_bytes_count * 8)):
             value = set_bit_in_value(sign_bit, i, value)
-        byte_value = value.to_bytes(1, 'big')
+        byte_value = value.to_bytes(out_bytes_count, 'big')
         int_val = int.from_bytes(byte_value, 'big', signed = True)
     return (int_val)
 
@@ -109,8 +109,8 @@ class tmga5170_frame_decoder:
         OFFSET_VALUE1__13_7    = get_masked_value(data, 7,    0x007F)
         OFFSET_VALUE2__6_0     = get_masked_value(data, 0,    0x007F)
         return    f"[15-14] OFFSET_SELECTION: {int_to_hex_string(OFFSET_SELECTION_15_14)}, \
-                    [13-7] OFFSET_VALUE1: {uintX_to_intX_represented_on_8_bits(OFFSET_VALUE1__13_7, 7)}, \
-                    [6-0] OFFSET_VALUE2: {uintX_to_intX_represented_on_8_bits(OFFSET_VALUE2__6_0, 7)}"
+                    [13-7] OFFSET_VALUE1: {uintX_to_intX_represented_on_Y_bytes(OFFSET_VALUE1__13_7, 7, 1)}, \
+                    [6-0] OFFSET_VALUE2: {uintX_to_intX_represented_on_Y_bytes(OFFSET_VALUE2__6_0, 7, 1)}"
 
     @staticmethod 
     def __MAG_GAIN_CONFIG_DecodingFunction(data: int):
@@ -539,7 +539,7 @@ class tmga5170_frame_decoder:
         ch1_value = ""
         ch2_value = ""
         register_address = None
-        register_name = None
+        register_name = ""
         register_decoding = ""
         register_value = None
         read_write = ""
@@ -562,13 +562,13 @@ class tmga5170_frame_decoder:
             first_4_bits_ch2 = get_masked_value(self.miso_value, 12, 0x0F)
             next_8_bits_ch2 = get_masked_value(self.miso_value, 24, 0xFF)
             all_12_bits_ch2 = (next_8_bits_ch2<<8) | first_4_bits_ch2
-
+            print(self.data_type)
             if self.data_type == self.DataType.magnetic_field:
-                ch1_value = uintX_to_intX_represented_on_8_bits(all_12_bits_ch1, 12)
-                ch2_value = uintX_to_intX_represented_on_8_bits(all_12_bits_ch2, 12)
+                ch1_value = uintX_to_intX_represented_on_Y_bytes(all_12_bits_ch1, 12, 2)
+                ch2_value = uintX_to_intX_represented_on_Y_bytes(all_12_bits_ch2, 12, 2)
 
             elif self.data_type == self.DataType.magnetic_field_temperature:
-                ch1_value = uintX_to_intX_represented_on_8_bits(all_12_bits_ch1, 12)
+                ch1_value = uintX_to_intX_represented_on_Y_bytes(all_12_bits_ch1, 12, 2)
                 ch2_value = all_12_bits_ch2
 
             elif self.data_type == self.DataType.angle_magnitude:
@@ -622,12 +622,9 @@ class Hla(HighLevelAnalyzer):
             'MOSI:{{data.mosi}}, \
             crc_mosi_expected: {{data.mosi_crc_calculated}},\
             {{data.crc_mosi_correct}}, \
-            R/W:{{data.read_write}}, \
-            RegAddr:{{data.register_address}} - {{data.register_name}}, \
             \nMISO:{{data.miso}}, \
             crc_miso_expected: {{data.miso_crc_calculated}},\
-            {{data.crc_miso_correct}},\
-            decoded_reg_val:{{data.register_decoding}}'
+            {{data.crc_miso_correct}}'
         }
     }
     
@@ -734,21 +731,15 @@ class Hla(HighLevelAnalyzer):
                         'miso_crc_calculated':int_to_hex_string(miso_crc_group.crc_calculated),                         \
                         'miso_crc_from_bus':int_to_hex_string(miso_crc_group.crc_from_bus),                             \
                         'crc_miso_correct':miso_crc_group.crc_status,                                                   \
-                        'read_write':address_8bit_register_16bit_group.read_write,                                      \
-                        'register_address':int_to_hex_string(address_8bit_register_16bit_group.register_address),       \
-                        'register_name':address_8bit_register_16bit_group.register_name,                                \
-                        'register_value':int_to_hex_string(address_8bit_register_16bit_group.register_value),           \
-                        'register_decoding':address_8bit_register_16bit_group.register_decoding,                        \
+                        'read_write':data_24_bit_group.read_write,                                      \
+                        'register_address':int_to_hex_string(data_24_bit_group.register_address),       \
+                        'register_name':data_24_bit_group.register_name,                                \
+                        'register_value':int_to_hex_string(data_24_bit_group.register_value),           \
+                        'register_decoding':data_24_bit_group.register_decoding,                        \
+                        'ch1_value':data_24_bit_group.ch1_value,                        \
+                        'ch2_value':data_24_bit_group.ch2_value,                        \
                         'stat_2_0':int_to_hex_string(cmd_stat_4_bit_group.stat_2_0),                                    \
                         'error_stat':int_to_hex_string(cmd_stat_4_bit_group.error_stat),                                \
-                        't_stat':int_to_hex_string(stat_8_bit_group.t_stat),                                            \
-                        'z_stat':int_to_hex_string(stat_8_bit_group.z_stat),                                            \
-                        'y_stat':int_to_hex_string(stat_8_bit_group.y_stat),                                            \
-                        'x_stat':int_to_hex_string(stat_8_bit_group.x_stat),                                            \
-                        'afe_alrt_status0_stat':int_to_hex_string(stat_8_bit_group.afe_alrt_status0_stat),              \
-                        'sys_alrt_status1_stat':int_to_hex_string(stat_8_bit_group.sys_alrt_status1_stat),              \
-                        'cfg_reset_stat':int_to_hex_string(stat_8_bit_group.cfg_reset_stat),                            \
-                        'prev_crc_stat':int_to_hex_string(stat_8_bit_group.prev_crc_stat),                              \
                         'cmd3':int_to_hex_string(cmd_stat_4_bit_group.cmd3),                                            \
                         'cmd2':int_to_hex_string(cmd_stat_4_bit_group.cmd2),                                            \
                         'cmd1':int_to_hex_string(cmd_stat_4_bit_group.cmd1),                                            \
@@ -759,8 +750,7 @@ class Hla(HighLevelAnalyzer):
             self.enable_time = None
             self.frame_data_MISO = []
             self.frame_data_MOSI = []
-            if( retVal != None ):
-                return retVal
+            
 
         if(frame.type == "result"):
             self.frame_data_MISO.append(frame.data['miso'])
@@ -769,4 +759,5 @@ class Hla(HighLevelAnalyzer):
             print("MOSI " + str(frame.data['mosi']))
         print("frame.type " + str(frame.type))
         # Return the data frame itself
+        return retVal
 

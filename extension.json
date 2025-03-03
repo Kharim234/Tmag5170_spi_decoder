@@ -1,7 +1,7 @@
 {
   "name": "Tmag5170_SPI_decoder",
   "apiVersion": "1.0.0",
-  "author": "Michal Malinowski",
+  "author": "Michał Malinowski",
   "version": "0.0.1",
   "description": "Extension for analyzing protocol use by tmag5170 magnetic field sensor on spi bus",
   "extensions": {

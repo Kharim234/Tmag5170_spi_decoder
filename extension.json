@@ -1,13 +1,13 @@
 {
-  "name": "test",
+  "name": "Tmag5170_SPI_decoder",
   "apiVersion": "1.0.0",
-  "author": "shy coder",
+  "author": "Michał Malinowski",
   "version": "0.0.1",
-  "description": "",
+  "description": "Extension for analyzing protocol use by tmag5170 magnetic field sensor on spi bus",
   "extensions": {
-    "test": {
+    "Tmag5170_SPI_decoder": {
       "type": "HighLevelAnalyzer",
-      "entryPoint": "HighLevelAnalyzer.Hla"
+      "entryPoint": "Tmag5170_spi_decoder.Hla"
     }
   }
 }

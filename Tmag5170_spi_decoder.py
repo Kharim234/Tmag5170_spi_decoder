@@ -115,18 +115,20 @@ class tmga5170_frame_decoder:
         OFFSET_SELECTION_15_14 = get_masked_value(data, 14,    0x0003)
         OFFSET_VALUE1__13_7    = get_masked_value(data, 7,    0x007F)
         OFFSET_VALUE2__6_0     = get_masked_value(data, 0,    0x007F)
-        return    f"[15-14] OFFSET_SELECTION: {int_to_hex_string(OFFSET_SELECTION_15_14)}, \
-                    [13-7] OFFSET_VALUE1: {uintX_to_intX_represented_on_Y_bytes(OFFSET_VALUE1__13_7, 7, 1)}, \
-                    [6-0] OFFSET_VALUE2: {uintX_to_intX_represented_on_Y_bytes(OFFSET_VALUE2__6_0, 7, 1)}"
+        return    \
+f"[15-14] OFFSET_SELECTION: {int_to_hex_string(OFFSET_SELECTION_15_14)}, \
+[13-7] OFFSET_VALUE1: {uintX_to_intX_represented_on_Y_bytes(OFFSET_VALUE1__13_7, 7, 1)}, \
+[6-0] OFFSET_VALUE2: {uintX_to_intX_represented_on_Y_bytes(OFFSET_VALUE2__6_0, 7, 1)}"
 
     @staticmethod 
     def __MAG_GAIN_CONFIG_DecodingFunction(data: int):
         GAIN_SELECTION_15_14 = get_masked_value(data, 14,    0x0003)
         RESERVED_13_11       = get_masked_value(data, 11,    0x0007)
         GAIN_VALUE_10_0      = get_masked_value(data, 10,    0x07FF)
-        return    f"[15-14] GAIN_SELECTION: {int_to_hex_string(GAIN_SELECTION_15_14)}, \
-                    [13-11] RESERVED: {int_to_hex_string(RESERVED_13_11)}, \
-                    [10-0] GAIN_VALUE: {int_to_hex_string(GAIN_VALUE_10_0)}"
+        return    \
+f"[15-14] GAIN_SELECTION: {int_to_hex_string(GAIN_SELECTION_15_14)}, \
+[13-11] RESERVED: {int_to_hex_string(RESERVED_13_11)}, \
+[10-0] GAIN_VALUE: {int_to_hex_string(GAIN_VALUE_10_0)}"
 
     @staticmethod
     def __ALERT_CONFIG_DecodingFunction(data: int):
@@ -142,18 +144,19 @@ class tmga5170_frame_decoder:
         Z_THRX_ALRT_2       = get_masked_value(data, 2,     0x0001)
         Y_THRX_ALRT_1       = get_masked_value(data, 1,     0x0001)
         X_THRX_ALRT_0       = get_masked_value(data, 0,     0x0001)
-        return    f"[15-14] RESERVED: {int_to_hex_string(RESERVED_15_14)}, \
-                    [13] ALERT_LATCH: {int_to_hex_string(ALERT_LATCH_13)}, \
-                    [12] ALERT_MODE: {int_to_hex_string(ALERT_MODE_12)}, \
-                    [11] STATUS_ALRT: {int_to_hex_string(STATUS_ALRT_11)}, \
-                    [10-9] RESERVED: {int_to_hex_string(RESERVED_10_9)}, \
-                    [8] RSLT_ALRT: {int_to_hex_string(RSLT_ALRT_8)}, \
-                    [7-6] RESERVED: {int_to_hex_string(RESERVED_7_6)}, \
-                    [5-4] THRX_COUNT: {int_to_hex_string(THRX_COUNT_5_4)}, \
-                    [3] T_THRX_ALRT: {int_to_hex_string(T_THRX_ALRT_3)}, \
-                    [2] Z_THRX_ALRT: {int_to_hex_string(Z_THRX_ALRT_2)}, \
-                    [1] Y_THRX_ALRT: {int_to_hex_string(Y_THRX_ALRT_1)}, \
-                    [0] X_THRX_ALRT: {int_to_hex_string(X_THRX_ALRT_0)}"
+        return    \
+f"[15-14] RESERVED: {int_to_hex_string(RESERVED_15_14)}, \
+[13] ALERT_LATCH: {int_to_hex_string(ALERT_LATCH_13)}, \
+[12] ALERT_MODE: {int_to_hex_string(ALERT_MODE_12)}, \
+[11] STATUS_ALRT: {int_to_hex_string(STATUS_ALRT_11)}, \
+[10-9] RESERVED: {int_to_hex_string(RESERVED_10_9)}, \
+[8] RSLT_ALRT: {int_to_hex_string(RSLT_ALRT_8)}, \
+[7-6] RESERVED: {int_to_hex_string(RESERVED_7_6)}, \
+[5-4] THRX_COUNT: {int_to_hex_string(THRX_COUNT_5_4)}, \
+[3] T_THRX_ALRT: {int_to_hex_string(T_THRX_ALRT_3)}, \
+[2] Z_THRX_ALRT: {int_to_hex_string(Z_THRX_ALRT_2)}, \
+[1] Y_THRX_ALRT: {int_to_hex_string(Y_THRX_ALRT_1)}, \
+[0] X_THRX_ALRT: {int_to_hex_string(X_THRX_ALRT_0)}"
 
     @staticmethod
     def __SYSTEM_CONFIG_DecodingFunction(data: int):
@@ -167,16 +170,17 @@ class tmga5170_frame_decoder:
         Z_HLT_EN_2          = get_masked_value(data, 2,     0x0001)
         Y_HLT_EN_1          = get_masked_value(data, 1,     0x0001)
         X_HLT_EN_0          = get_masked_value(data, 0,     0x0001)
-        return    f"[15-14] RESERVED: {int_to_hex_string(RESERVED_15_14)}, \
-                    [13-12] DIAG_SEL: {int_to_hex_string(DIAG_SEL_13_12)}, \
-                    [11] RESERVED: {int_to_hex_string(RESERVED_11)}, \
-                    [10-9] TRIGGER_MODE: {int_to_hex_string(TRIGGER_MODE_10_9)}, \
-                    [8-6] DATA_TYPE: {int_to_hex_string(DATA_TYPE_8_6)}, \
-                    [5] DIAG_EN: {int_to_hex_string(DIAG_EN_5)}, \
-                    [4-3] RESERVED: {int_to_hex_string(RESERVED_4_3)}, \
-                    [2] Z_HLT_EN: {int_to_hex_string(Z_HLT_EN_2)}, \
-                    [1] Y_HLT_EN: {int_to_hex_string(Y_HLT_EN_1)}, \
-                    [0] X_HLT_EN: {int_to_hex_string(X_HLT_EN_0)}"
+        return    \
+f"[15-14] RESERVED: {int_to_hex_string(RESERVED_15_14)}, \
+[13-12] DIAG_SEL: {int_to_hex_string(DIAG_SEL_13_12)}, \
+[11] RESERVED: {int_to_hex_string(RESERVED_11)}, \
+[10-9] TRIGGER_MODE: {int_to_hex_string(TRIGGER_MODE_10_9)}, \
+[8-6] DATA_TYPE: {int_to_hex_string(DATA_TYPE_8_6)}, \
+[5] DIAG_EN: {int_to_hex_string(DIAG_EN_5)}, \
+[4-3] RESERVED: {int_to_hex_string(RESERVED_4_3)}, \
+[2] Z_HLT_EN: {int_to_hex_string(Z_HLT_EN_2)}, \
+[1] Y_HLT_EN: {int_to_hex_string(Y_HLT_EN_1)}, \
+[0] X_HLT_EN: {int_to_hex_string(X_HLT_EN_0)}"
 
     @staticmethod
     def __SENSOR_CONFIG_DecodingFunction(data: int):
@@ -186,12 +190,13 @@ class tmga5170_frame_decoder:
         Z_RANGE_5_4         = get_masked_value(data, 4,     0x0003)
         Y_RANGE_3_2         = get_masked_value(data, 2,     0x0003)
         X_RANGE_1_0         = get_masked_value(data, 0,     0x0003)
-        return    f"[15-14] ANGLE_EN: {int_to_hex_string(ANGLE_EN_15_14)}, \
-                    [13-10] SLEEPTIME: {int_to_hex_string(SLEEPTIME_13_10)}, \
-                    [9-6] MAG_CH_EN: {int_to_hex_string(MAG_CH_EN_9_6)}, \
-                    [5-4] Z_RANGE: {int_to_hex_string(Z_RANGE_5_4)}, \
-                    [3-2] Y_RANGE: {int_to_hex_string(Y_RANGE_3_2)}, \
-                    [1-0] X_RANGE: {int_to_hex_string(X_RANGE_1_0)}"
+        return    \
+f"[15-14] ANGLE_EN: {int_to_hex_string(ANGLE_EN_15_14)}, \
+[13-10] SLEEPTIME: {int_to_hex_string(SLEEPTIME_13_10)}, \
+[9-6] MAG_CH_EN: {int_to_hex_string(MAG_CH_EN_9_6)}, \
+[5-4] Z_RANGE: {int_to_hex_string(Z_RANGE_5_4)}, \
+[3-2] Y_RANGE: {int_to_hex_string(Y_RANGE_3_2)}, \
+[1-0] X_RANGE: {int_to_hex_string(X_RANGE_1_0)}"
 
     @staticmethod
     def __DEVICE_CONFIG_DecodingFunction(data: int):
@@ -205,16 +210,17 @@ class tmga5170_frame_decoder:
         T_RATE_2            = get_masked_value(data, 2,     0x0001)
         T_HLT_EN_1          = get_masked_value(data, 1,     0x0001)
         RESERVED_0          = get_masked_value(data, 0,     0x0003)
-        return    f"[15] RESERVED: {int_to_hex_string(RESERVED_15)}, \
-                    [14-12] CONV_AVG: {int_to_hex_string(CONV_AVG_14_12)}, \
-                    [11-10] RESERVED: {int_to_hex_string(RESERVED_11_10)}, \
-                    [9-8] MAG_TEMPCO: {int_to_hex_string(MAG_TEMPCO_9_8)}, \
-                    [7] RESERVED: {int_to_hex_string(RESERVED_7)}, \
-                    [6-4] OPERATING_MODE: {int_to_hex_string(OPERATING_MODE_6_4)}, \
-                    [3] T_CH_EN: {int_to_hex_string(T_CH_EN_3)}, \
-                    [2] T_RATE: {int_to_hex_string(T_RATE_2)}, \
-                    [1] T_HLT_EN: {int_to_hex_string(T_HLT_EN_1)}, \
-                    [0] RESERVED: {int_to_hex_string(RESERVED_0)}"
+        return    \
+f"[15] RESERVED: {int_to_hex_string(RESERVED_15)}, \
+[14-12] CONV_AVG: {int_to_hex_string(CONV_AVG_14_12)}, \
+[11-10] RESERVED: {int_to_hex_string(RESERVED_11_10)}, \
+[9-8] MAG_TEMPCO: {int_to_hex_string(MAG_TEMPCO_9_8)}, \
+[7] RESERVED: {int_to_hex_string(RESERVED_7)}, \
+[6-4] OPERATING_MODE: {int_to_hex_string(OPERATING_MODE_6_4)}, \
+[3] T_CH_EN: {int_to_hex_string(T_CH_EN_3)}, \
+[2] T_RATE: {int_to_hex_string(T_RATE_2)}, \
+[1] T_HLT_EN: {int_to_hex_string(T_HLT_EN_1)}, \
+[0] RESERVED: {int_to_hex_string(RESERVED_0)}"
 
     @staticmethod
     def __CONV_STATUS_DecodingFunction(data: int):
@@ -229,17 +235,18 @@ class tmga5170_frame_decoder:
         SET_COUNT_6_4   = get_masked_value(data, 4,     0x0007)
         RESERVED_3_2    = get_masked_value(data, 2,     0x0003)
         ALRT_STATUS_1_0 = get_masked_value(data, 0,     0x0003)
-        return    f"[15-14] RESERVED: {int_to_hex_string(RESERVED_15_14)}, \
-                    [13] RDY: {int_to_hex_string(RDY_13)}, \
-                    [12] A: {int_to_hex_string(A_12)}, \
-                    [11] T: {int_to_hex_string(T_11)}, \
-                    [10] Z: {int_to_hex_string(Z_10)}, \
-                    [9] Y: {int_to_hex_string(Y_9)}, \
-                    [8] X: {int_to_hex_string(X_8)}, \
-                    [7] RESERVED: {int_to_hex_string(RESERVED_7)}, \
-                    [6-4] SET_COUNT: {int_to_hex_string(SET_COUNT_6_4)}, \
-                    [3-2] RESERVED: {int_to_hex_string(RESERVED_3_2)}, \
-                    [1-0] ALRT_STATUS: {int_to_hex_string(ALRT_STATUS_1_0)}"
+        return    \
+f"[15-14] RESERVED: {int_to_hex_string(RESERVED_15_14)}, \
+[13] RDY: {int_to_hex_string(RDY_13)}, \
+[12] A: {int_to_hex_string(A_12)}, \
+[11] T: {int_to_hex_string(T_11)}, \
+[10] Z: {int_to_hex_string(Z_10)}, \
+[9] Y: {int_to_hex_string(Y_9)}, \
+[8] X: {int_to_hex_string(X_8)}, \
+[7] RESERVED: {int_to_hex_string(RESERVED_7)}, \
+[6-4] SET_COUNT: {int_to_hex_string(SET_COUNT_6_4)}, \
+[3-2] RESERVED: {int_to_hex_string(RESERVED_3_2)}, \
+[1-0] ALRT_STATUS: {int_to_hex_string(ALRT_STATUS_1_0)}"
 
     @staticmethod
     def __X_THRX_CONFIG_DecodingFunction(data: int):
@@ -296,16 +303,17 @@ class tmga5170_frame_decoder:
         RESERVED_7_2    = get_masked_value(data, 7,     0x003F)
         TRIM_STAT_1     = get_masked_value(data, 1,     0x0001)
         LDO_STAT_0      = get_masked_value(data, 0,     0x0001)
-        return    f"[15] CFG_RESET: {int_to_hex_string(CFG_RESET_15)}, \
-                    [14-13] RESERVED: {int_to_hex_string(RESERVED_14_13)}, \
-                    [12] SENS_STAT: {int_to_hex_string(SENS_STAT_12)}, \
-                    [11] TEMP_STAT: {int_to_hex_string(TEMP_STAT_11)}, \
-                    [10] ZHS_STAT: {int_to_hex_string(ZHS_STAT_10)}, \
-                    [9] YHS_STAT: {int_to_hex_string(YHS_STAT_9)}, \
-                    [8] XHS_STAT: {int_to_hex_string(XHS_STAT_8)}, \
-                    [7-2] RESERVED: {int_to_hex_string(RESERVED_7_2)}, \
-                    [1] TRIM_STAT: {int_to_hex_string(TRIM_STAT_1)}, \
-                    [0] LDO_STAT: {int_to_hex_string(LDO_STAT_0)}"
+        return    \
+f"[15] CFG_RESET: {int_to_hex_string(CFG_RESET_15)}, \
+[14-13] RESERVED: {int_to_hex_string(RESERVED_14_13)}, \
+[12] SENS_STAT: {int_to_hex_string(SENS_STAT_12)}, \
+[11] TEMP_STAT: {int_to_hex_string(TEMP_STAT_11)}, \
+[10] ZHS_STAT: {int_to_hex_string(ZHS_STAT_10)}, \
+[9] YHS_STAT: {int_to_hex_string(YHS_STAT_9)}, \
+[8] XHS_STAT: {int_to_hex_string(XHS_STAT_8)}, \
+[7-2] RESERVED: {int_to_hex_string(RESERVED_7_2)}, \
+[1] TRIM_STAT: {int_to_hex_string(TRIM_STAT_1)}, \
+[0] LDO_STAT: {int_to_hex_string(LDO_STAT_0)}"
 
     @staticmethod
     def __SYS_STATUS_DecodingFunction(data: int):
@@ -322,19 +330,20 @@ class tmga5170_frame_decoder:
         ZCH_THX_2               = get_masked_value(data, 2,     0x0001)
         YCH_THX_1               = get_masked_value(data, 1,     0x0001)
         XCH_THX_0               = get_masked_value(data, 0,     0x0001)
-        return    f"[15] ALRT_LVL: {int_to_hex_string(ALRT_LVL_15)}, \
-                    [14] ALRT_DRV: {int_to_hex_string(ALRT_DRV_14)}, \
-                    [13] SDO_DRV: {int_to_hex_string(SDO_DRV_13)}, \
-                    [12] CRC_STAT: {int_to_hex_string(CRC_STAT_12)}, \
-                    [11] FRAME_STAT: {int_to_hex_string(FRAME_STAT_11)}, \
-                    [10-8] OPERATING_STAT: {int_to_hex_string(OPERATING_STAT_10_8)}, \
-                    [7-6] RESERVED: {int_to_hex_string(RESERVED_7_6)}, \
-                    [5] VCC_OV: {int_to_hex_string(VCC_OV_5)}, \
-                    [4] VCC_UV: {int_to_hex_string(VCC_UV_4)}, \
-                    [3] TEMP_THX: {int_to_hex_string(TEMP_THX_3)}, \
-                    [2] ZCH_THX: {int_to_hex_string(ZCH_THX_2)}, \
-                    [1] YCH_THX: {int_to_hex_string(YCH_THX_1)}, \
-                    [0] XCH_THX: {int_to_hex_string(XCH_THX_0)}"
+        return    \
+f"[15] ALRT_LVL: {int_to_hex_string(ALRT_LVL_15)}, \
+[14] ALRT_DRV: {int_to_hex_string(ALRT_DRV_14)}, \
+[13] SDO_DRV: {int_to_hex_string(SDO_DRV_13)}, \
+[12] CRC_STAT: {int_to_hex_string(CRC_STAT_12)}, \
+[11] FRAME_STAT: {int_to_hex_string(FRAME_STAT_11)}, \
+[10-8] OPERATING_STAT: {int_to_hex_string(OPERATING_STAT_10_8)}, \
+[7-6] RESERVED: {int_to_hex_string(RESERVED_7_6)}, \
+[5] VCC_OV: {int_to_hex_string(VCC_OV_5)}, \
+[4] VCC_UV: {int_to_hex_string(VCC_UV_4)}, \
+[3] TEMP_THX: {int_to_hex_string(TEMP_THX_3)}, \
+[2] ZCH_THX: {int_to_hex_string(ZCH_THX_2)}, \
+[1] YCH_THX: {int_to_hex_string(YCH_THX_1)}, \
+[0] XCH_THX: {int_to_hex_string(XCH_THX_0)}"
 
     @staticmethod
     def __ANGLE_RESULT_DecodingFunction(data: int):
@@ -347,11 +356,12 @@ class tmga5170_frame_decoder:
         RESERVED_3      = get_masked_value(data, 3, 0x0001)
         CRC_DIS_2       = get_masked_value(data, 2, 0x0001)
         OSC_CNT_CTL_1_0 = get_masked_value(data, 0, 0x0003)
-        return    f"[15-6] RESERVED: {int_to_hex_string(RESERVED_15_6)}, \
-                    [5-4] VER: {int_to_hex_string(VER_5_4)}, \
-                    [3] RESERVED: {int_to_hex_string(RESERVED_3)}, \
-                    [2] CRC_DIS: {int_to_hex_string(CRC_DIS_2)}, \
-                    [1-0] OSC_CNT_CTL: {int_to_hex_string(OSC_CNT_CTL_1_0)}"
+        return    \
+f"[15-6] RESERVED: {int_to_hex_string(RESERVED_15_6)}, \
+[5-4] VER: {int_to_hex_string(VER_5_4)}, \
+[3] RESERVED: {int_to_hex_string(RESERVED_3)}, \
+[2] CRC_DIS: {int_to_hex_string(CRC_DIS_2)}, \
+[1-0] OSC_CNT_CTL: {int_to_hex_string(OSC_CNT_CTL_1_0)}"
 
     @staticmethod
     def __OSC_MONITOR_DecodingFunction(data: int):
@@ -685,20 +695,20 @@ class Hla(HighLevelAnalyzer):
                         'register_name':register_name,                                                                      \
                         'register_value':int_to_hex_string(address_8bit_register_16bit_group.register_value, 4),            \
                         'register_decoding':address_8bit_register_16bit_group.register_decoding,                            \
-                        'stat_2_0':int_none_verificatio(cmd_stat_4_bit_group.stat_2_0),                                     \
-                        'error_stat':int_none_verificatio(cmd_stat_4_bit_group.error_stat),                                 \
-                        't_stat':int_none_verificatio(stat_8_bit_group.t_stat),                                             \
-                        'z_stat':int_none_verificatio(stat_8_bit_group.z_stat),                                             \
-                        'y_stat':int_none_verificatio(stat_8_bit_group.y_stat),                                             \
-                        'x_stat':int_none_verificatio(stat_8_bit_group.x_stat),                                             \
-                        'afe_alrt_status0_stat':int_none_verificatio(stat_8_bit_group.afe_alrt_status0_stat),               \
-                        'sys_alrt_status1_stat':int_none_verificatio(stat_8_bit_group.sys_alrt_status1_stat),               \
-                        'cfg_reset_stat':int_none_verificatio(stat_8_bit_group.cfg_reset_stat),                             \
-                        'prev_crc_stat':int_none_verificatio(stat_8_bit_group.prev_crc_stat),                               \
-                        'cmd3':int_none_verificatio(cmd_stat_4_bit_group.cmd3),                                             \
-                        'cmd2':int_none_verificatio(cmd_stat_4_bit_group.cmd2),                                             \
-                        'cmd1':int_none_verificatio(cmd_stat_4_bit_group.cmd1),                                             \
-                        'cmd0':int_none_verificatio(cmd_stat_4_bit_group.cmd0),                                             \
+                        'stat_2_0':int_to_hex_string(cmd_stat_4_bit_group.stat_2_0),                                     \
+                        'error_stat':int_to_hex_string(cmd_stat_4_bit_group.error_stat),                                 \
+                        't_stat':int_to_hex_string(stat_8_bit_group.t_stat),                                             \
+                        'z_stat':int_to_hex_string(stat_8_bit_group.z_stat),                                             \
+                        'y_stat':int_to_hex_string(stat_8_bit_group.y_stat),                                             \
+                        'x_stat':int_to_hex_string(stat_8_bit_group.x_stat),                                             \
+                        'afe_alrt_status0_stat':int_to_hex_string(stat_8_bit_group.afe_alrt_status0_stat),               \
+                        'sys_alrt_status1_stat':int_to_hex_string(stat_8_bit_group.sys_alrt_status1_stat),               \
+                        'cfg_reset_stat':int_to_hex_string(stat_8_bit_group.cfg_reset_stat),                             \
+                        'prev_crc_stat':int_to_hex_string(stat_8_bit_group.prev_crc_stat),                               \
+                        'cmd3':int_to_hex_string(cmd_stat_4_bit_group.cmd3),                                             \
+                        'cmd2':int_to_hex_string(cmd_stat_4_bit_group.cmd2),                                             \
+                        'cmd1':int_to_hex_string(cmd_stat_4_bit_group.cmd1),                                             \
+                        'cmd0':int_to_hex_string(cmd_stat_4_bit_group.cmd0),                                             \
                         'FrameCnt_debug':self.counter,                                                                      \
                 }
                 
@@ -724,12 +734,12 @@ class Hla(HighLevelAnalyzer):
                         'register_decoding':data_24_bit_group.register_decoding,                                            \
                         'ch1_value':data_24_bit_group.ch1_value,                                                            \
                         'ch2_value':data_24_bit_group.ch2_value,                                                            \
-                        'stat_2_0':int_none_verificatio(cmd_stat_4_bit_group.stat_2_0),                                     \
-                        'error_stat':int_none_verificatio(cmd_stat_4_bit_group.error_stat),                                 \
-                        'cmd3':int_none_verificatio(cmd_stat_4_bit_group.cmd3),                                             \
-                        'cmd2':int_none_verificatio(cmd_stat_4_bit_group.cmd2),                                             \
-                        'cmd1':int_none_verificatio(cmd_stat_4_bit_group.cmd1),                                             \
-                        'cmd0':int_none_verificatio(cmd_stat_4_bit_group.cmd0),                                             \
+                        'stat_2_0':int_to_hex_string(cmd_stat_4_bit_group.stat_2_0),                                     \
+                        'error_stat':int_to_hex_string(cmd_stat_4_bit_group.error_stat),                                 \
+                        'cmd3':int_to_hex_string(cmd_stat_4_bit_group.cmd3),                                             \
+                        'cmd2':int_to_hex_string(cmd_stat_4_bit_group.cmd2),                                             \
+                        'cmd1':int_to_hex_string(cmd_stat_4_bit_group.cmd1),                                             \
+                        'cmd0':int_to_hex_string(cmd_stat_4_bit_group.cmd0),                                             \
                         'FrameCnt_debug':self.counter,                                                                      \
                 }
             retVal = AnalyzerFrame(AnalyzerFrameType, self.start_frame_label_time, self.end_frame_label_time, AnalyzerFrameDictionary)

@@ -605,12 +605,12 @@ class Hla(HighLevelAnalyzer):
     result_types = {
         'tmag5170_regular': {
             'format': \
-            'MOSI:{{data.mosi}}, \
+            'MOSI:{{data.mosi_frame}}, \
             crc_mosi_expected: {{data.mosi_crc_calculated}},\
             {{data.crc_mosi_correct}}, \
             R/W:{{data.read_write}}, \
             RegAddr:{{data.register_address}} - {{data.register_name}}, \
-            \nMISO:{{data.miso}}, \
+            \nMISO:{{data.miso_frame}}, \
             crc_miso_expected: {{data.miso_crc_calculated}}, \
             {{data.crc_miso_correct}}, \
             decoded_reg_val:{{data.register_decoding}}, \
@@ -618,10 +618,10 @@ class Hla(HighLevelAnalyzer):
         },
         'tmag5170_special': {
             'format': \
-            'MOSI:{{data.mosi}}, \
+            'MOSI:{{data.mosi_frame}}, \
             crc_mosi_expected: {{data.mosi_crc_calculated}},\
             {{data.crc_mosi_correct}}, \
-            \nMISO:{{data.miso}}, \
+            \nMISO:{{data.miso_frame}}, \
             crc_miso_expected: {{data.miso_crc_calculated}}, \
             {{data.crc_miso_correct}}, \
             ch1_value:{{data.ch1_value}}, \

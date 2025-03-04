@@ -286,10 +286,24 @@ f"[15-14] RESERVED: {int_to_hex_string(RESERVED_15_14)}, \
     def __Z_CH_RESULT_DecodingFunction(data: int):
         int_val = uint16_to_int16(data)
         return f"[15-0] Z_CH_RESULT: {int_val}"
+    
+    @staticmethod
+    def convert_raw_temp_to_celsius(temp_raw: int, data_type : DataType)->float:
+        #TYP values are used here
+        TadcT0 = 17522
+        TadcRes = 60
+        TsensT0 = 25
+        if data_type == tmga5170_frame_decoder.DataType.default_32bit_access:
+            temperature = TsensT0 + ((temp_raw - TadcT0)/TadcRes)
 
+        else:
+            temperature = TsensT0 + ((16*(temp_raw - (TadcT0/16)))/TadcRes)
+        return temperature
+    
     @staticmethod
     def __TEMP_RESULT_DecodingFunction(data: int):
-        return f"[15-0] TEMP_RESULT: {data}"
+        temperature = tmga5170_frame_decoder.convert_raw_temp_to_celsius(data, tmga5170_frame_decoder.DataType.default_32bit_access)
+        return f"[15-0] TEMP_RESULT: {data} [{temperature:.2f} Celsius]"
 
     @staticmethod
     def __AFE_STATUS_DecodingFunction(data: int):
@@ -346,8 +360,25 @@ f"[15] ALRT_LVL: {int_to_hex_string(ALRT_LVL_15)}, \
 [0] XCH_THX: {int_to_hex_string(XCH_THX_0)}"
 
     @staticmethod
+    def convert_raw_angle_to_deg(angle_raw: int, data_type : DataType)->float:
+
+        if data_type == tmga5170_frame_decoder.DataType.default_32bit_access:
+            angle_frac = angle_raw & 0x0F
+            angle_frac = angle_frac/16
+            angle_integer = (angle_raw >> 4) & 0x01FF
+
+        else:
+            angle_frac = angle_raw & 0x07
+            angle_frac = angle_frac/8
+            angle_integer = (angle_raw >> 3) & 0x01FF
+
+        angle = angle_integer + angle_frac
+        return angle
+
+    @staticmethod
     def __ANGLE_RESULT_DecodingFunction(data: int):
-        return f"[15-0] ANGLE_RESULT: {data}"
+        angle = convert_raw_angle_to_deg(data, tmga5170_frame_decoder.DataType.default_32bit_access)
+        return f"[15-0] ANGLE_RESULT: {data} [{angle:.2f} Degrees]"
 
     @staticmethod
     def __TEST_CONFIG_DecodingFunction(data: int):

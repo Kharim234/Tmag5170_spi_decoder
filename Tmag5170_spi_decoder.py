@@ -300,35 +300,49 @@ f"[15-14] RESERVED: {int_to_hex_string(RESERVED_15_14)}, \
         return f"[15-8] T_HI_THRESHOLD: {T_HI_THRESHOLD_15_8}, [7-0] T_LO_THRESHOLD: {T_LO_THRESHOLD_7_0}"
 
     @staticmethod
-    def convert_raw_magnetic_field_to_miliTeslas(mag_raw: int, data_type : DataType, Br_range: Br_range)->str:
+    def convert_raw_magnetic_field_to_miliTeslas(mag_raw: int, data_type : DataType, Br_range: Br_range):
+        magnetic_field = None
         if Br_range in tmga5170_frame_decoder.Br_range_mapping:
             Br = tmga5170_frame_decoder.Br_range_mapping[Br_range]
             if data_type == tmga5170_frame_decoder.DataType.default_32bit_access:
-                magnetic_field = (mag_raw * 2 * Br)/(2^16)
+                magnetic_field = (mag_raw * 2 * Br)/(pow(2,16))
 
             else:
-                magnetic_field = (mag_raw * 2 * Br)/(2^12)
-            magnetic_field_str = f"[{magnetic_field:.2f} mT]"
+                magnetic_field = (mag_raw * 2 * Br)/(pow(2,12))
+
+        return magnetic_field
+    
+    @staticmethod
+    def get_magnetic_field_str(magnetic_field)->str:
+        if magnetic_field != None:
+            magnetic_field_str = f"[{magnetic_field:0.2f} mT]"
         else:
             magnetic_field_str = ""
+
         return magnetic_field_str
 
     def __X_CH_RESULT_DecodingFunction(self, data: int):
 
         int_val = uint16_to_int16(data)
-        magnetic_field_str = tmga5170_frame_decoder.convert_raw_magnetic_field_to_miliTeslas(int_val, tmga5170_frame_decoder.DataType.default_32bit_access, self.Br_X_axis_enum)
+        magnetic_field = tmga5170_frame_decoder.convert_raw_magnetic_field_to_miliTeslas(int_val, tmga5170_frame_decoder.DataType.default_32bit_access, self.Br_X_axis_enum)
+        magnetic_field_str = tmga5170_frame_decoder.get_magnetic_field_str(magnetic_field)
+
         return f"[15-0] X_CH_RESULT: {int_val} {magnetic_field_str}"
 
     def __Y_CH_RESULT_DecodingFunction(self, data: int):
 
         int_val = uint16_to_int16(data)
-        magnetic_field_str = tmga5170_frame_decoder.convert_raw_magnetic_field_to_miliTeslas(int_val, tmga5170_frame_decoder.DataType.default_32bit_access, self.Br_Y_axis_enum)
+        magnetic_field = tmga5170_frame_decoder.convert_raw_magnetic_field_to_miliTeslas(int_val, tmga5170_frame_decoder.DataType.default_32bit_access, self.Br_Y_axis_enum)
+        magnetic_field_str = tmga5170_frame_decoder.get_magnetic_field_str(magnetic_field)
+
         return f"[15-0] Y_CH_RESULT: {int_val} {magnetic_field_str}"
 
     def __Z_CH_RESULT_DecodingFunction(self, data: int):
 
         int_val = uint16_to_int16(data)
-        magnetic_field_str = tmga5170_frame_decoder.convert_raw_magnetic_field_to_miliTeslas(int_val, tmga5170_frame_decoder.DataType.default_32bit_access, self.Br_Z_axis_enum)
+        magnetic_field = tmga5170_frame_decoder.convert_raw_magnetic_field_to_miliTeslas(int_val, tmga5170_frame_decoder.DataType.default_32bit_access, self.Br_Z_axis_enum)
+        magnetic_field_str = tmga5170_frame_decoder.get_magnetic_field_str(magnetic_field)
+
         return f"[15-0] Z_CH_RESULT: {int_val} {magnetic_field_str}"
     
     @staticmethod
@@ -659,6 +673,16 @@ f"[15-6] RESERVED: {int_to_hex_string(RESERVED_15_6)}, \
         return tmga5170_frame_decoder.data_24_bit_group_type(read_write, ch1_value, ch2_value, register_address, register_name, register_decoding, register_value)
 # High level analyzers must subclass the HighLevelAnalyzer class.
 class Hla(HighLevelAnalyzer):
+        # class Br_range(Enum):
+        # TMAG5170A1_50mT_0h = 0
+        # TMAG5170A1_25mT_1h = 1
+        # TMAG5170A1_100mT_2h = 2
+
+        # TMAG5170A2_150mT_0h = 3
+        # TMAG5170A2_75mT_1h = 4
+        # TMAG5170A2_300mT_2h = 5
+
+        # TMAG5170_NotSelected = 6
 
     DATA_TYPE_MAGNETIC_FIELD_ONLY_STRING = "DATA_TYPE = 1h-3h, 12-Bit XY/XZ/ZY data access"
     DATA_TYPE_MAGNETIC_FIELD_AND_TEMPERATURE_STRING = "DATA_TYPE = 4h-6h, 12-Bit XT/YT/ZT data access"
@@ -682,6 +706,17 @@ class Hla(HighLevelAnalyzer):
     A2_300MT = "±300mT (TMAG5170A2)"
 
     RANGE_NOT_SELECTED = "-"
+
+    str_range_mapping = { 
+        A1_50MT:            tmga5170_frame_decoder.Br_range.TMAG5170A1_50mT_0h ,
+        A1_25MT:            tmga5170_frame_decoder.Br_range.TMAG5170A1_25mT_1h ,
+        A1_100MT:           tmga5170_frame_decoder.Br_range.TMAG5170A1_100mT_2h,
+        A2_150MT:           tmga5170_frame_decoder.Br_range.TMAG5170A2_150mT_0h,
+        A2_75MT:            tmga5170_frame_decoder.Br_range.TMAG5170A2_75mT_1h ,
+        A2_300MT:           tmga5170_frame_decoder.Br_range.TMAG5170A2_300mT_2h,
+        RANGE_NOT_SELECTED: tmga5170_frame_decoder.Br_range.TMAG5170_NotSelected
+        }
+
 
     X_RANGE = ChoicesSetting(choices=(RANGE_NOT_SELECTED, A2_150MT, A2_75MT, A2_300MT, A1_50MT, A1_25MT, A1_100MT))
     Y_RANGE = ChoicesSetting(choices=(RANGE_NOT_SELECTED, A2_150MT, A2_75MT, A2_300MT, A1_50MT, A1_25MT, A1_100MT))
@@ -752,7 +787,10 @@ class Hla(HighLevelAnalyzer):
 
 
 
-        self.decoder = tmga5170_frame_decoder(data_type = data_type_var)
+        self.decoder = tmga5170_frame_decoder(data_type = data_type_var, 
+                                              Br_X_axis_enum = self.str_range_mapping[self.X_RANGE], 
+                                              Br_Y_axis_enum = self.str_range_mapping[self.Y_RANGE], 
+                                              Br_Z_axis_enum = self.str_range_mapping[self.Z_RANGE])
         print("Settings:", self.DATA_TYPE,
               self.CRC_DIS)
 

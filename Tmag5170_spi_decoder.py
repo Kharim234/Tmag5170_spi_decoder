@@ -673,23 +673,33 @@ f"[15-6] RESERVED: {int_to_hex_string(RESERVED_15_6)}, \
         return tmga5170_frame_decoder.data_24_bit_group_type(read_write, ch1_value, ch2_value, register_address, register_name, register_decoding, register_value)
 # High level analyzers must subclass the HighLevelAnalyzer class.
 class Hla(HighLevelAnalyzer):
-        # class Br_range(Enum):
-        # TMAG5170A1_50mT_0h = 0
-        # TMAG5170A1_25mT_1h = 1
-        # TMAG5170A1_100mT_2h = 2
 
-        # TMAG5170A2_150mT_0h = 3
-        # TMAG5170A2_75mT_1h = 4
-        # TMAG5170A2_300mT_2h = 5
+    DATA_TYPE_0h = "DATA_TYPE = 0h, Default 32-bit register access"
+    DATA_TYPE_1h = "DATA_TYPE = 1h = 12-Bit XY data access"
+    DATA_TYPE_2h = "DATA_TYPE = 2h = 12-Bit XZ data access"
+    DATA_TYPE_3h = "DATA_TYPE = 3h = 12-Bit ZY data access"
+    DATA_TYPE_4h = "DATA_TYPE = 4h = 12-Bit XT data access"
+    DATA_TYPE_5h = "DATA_TYPE = 5h = 12-Bit YT data access"
+    DATA_TYPE_6h = "DATA_TYPE = 6h = 12-Bit ZT data access"
+    DATA_TYPE_7h = "DATA_TYPE = 7h = 12-Bit AM data access"
 
-        # TMAG5170_NotSelected = 6
+    str_data_type_mapping = { 
+        DATA_TYPE_0h : tmga5170_frame_decoder.DataType.default_32bit_access,
+        DATA_TYPE_1h : tmga5170_frame_decoder.DataType.magnetic_field,
+        DATA_TYPE_2h : tmga5170_frame_decoder.DataType.magnetic_field,
+        DATA_TYPE_3h : tmga5170_frame_decoder.DataType.magnetic_field,
+        DATA_TYPE_4h : tmga5170_frame_decoder.DataType.magnetic_field_temperature,
+        DATA_TYPE_5h : tmga5170_frame_decoder.DataType.magnetic_field_temperature,
+        DATA_TYPE_6h : tmga5170_frame_decoder.DataType.magnetic_field_temperature,
+        DATA_TYPE_7h : tmga5170_frame_decoder.DataType.angle_magnitude
+        }
 
     DATA_TYPE_MAGNETIC_FIELD_ONLY_STRING = "DATA_TYPE = 1h-3h, 12-Bit XY/XZ/ZY data access"
     DATA_TYPE_MAGNETIC_FIELD_AND_TEMPERATURE_STRING = "DATA_TYPE = 4h-6h, 12-Bit XT/YT/ZT data access"
     DATA_TYPE_ANGLE_AND_MAGNITUDE_STRING = "DATA_TYPE = 7h, 12-Bit AM data access"
-    DATA_TYPE_EQUAL_O_STRING = "DATA_TYPE = 0h, Default 32-bit register access"
+    
     #Only data type to which I have data is 0x00h due that others data_type are currently not implemented
-    DATA_TYPE = ChoicesSetting(choices=(DATA_TYPE_EQUAL_O_STRING, DATA_TYPE_MAGNETIC_FIELD_ONLY_STRING, DATA_TYPE_MAGNETIC_FIELD_AND_TEMPERATURE_STRING, DATA_TYPE_ANGLE_AND_MAGNITUDE_STRING))
+    DATA_TYPE = ChoicesSetting(choices=(DATA_TYPE_0h, DATA_TYPE_1h, DATA_TYPE_2h, DATA_TYPE_3h, DATA_TYPE_4h, DATA_TYPE_5h, DATA_TYPE_6h, DATA_TYPE_7h))
 
     CRC_EN_STRING = "CRC_DIS = 0h, CRC enabled in SPI communication"
     CRC_DIS_STRING = "CRC_DIS = 1h, CRC disabled in SPI communication"
@@ -769,25 +779,7 @@ class Hla(HighLevelAnalyzer):
         Settings can be accessed using the same name used above.
         '''
 
-        if self.DATA_TYPE == self.DATA_TYPE_EQUAL_O_STRING:
-            data_type_var = tmga5170_frame_decoder.DataType.default_32bit_access
-
-        elif self.DATA_TYPE == self.DATA_TYPE_MAGNETIC_FIELD_ONLY_STRING:
-            data_type_var = tmga5170_frame_decoder.DataType.magnetic_field
-
-        elif self.DATA_TYPE == self.DATA_TYPE_MAGNETIC_FIELD_AND_TEMPERATURE_STRING:
-            data_type_var = tmga5170_frame_decoder.DataType.magnetic_field_temperature
-
-        elif self.DATA_TYPE == self.DATA_TYPE_ANGLE_AND_MAGNITUDE_STRING:
-            data_type_var = tmga5170_frame_decoder.DataType.angle_magnitude
-
-        else:
-            raise Exception("Incorrect DATA_TYPE settings") 
-
-
-
-
-        self.decoder = tmga5170_frame_decoder(data_type = data_type_var, 
+        self.decoder = tmga5170_frame_decoder(data_type = self.str_data_type_mapping[self.DATA_TYPE], 
                                               Br_X_axis_enum = self.str_range_mapping[self.X_RANGE], 
                                               Br_Y_axis_enum = self.str_range_mapping[self.Y_RANGE], 
                                               Br_Z_axis_enum = self.str_range_mapping[self.Z_RANGE])
@@ -805,7 +797,7 @@ class Hla(HighLevelAnalyzer):
             mosi_frame, miso_frame = self.decoder.get_mosi_miso_str()
             miso_crc_group, mosi_crc_group, cmd_stat_4_bit_group = self.decoder.get_4_bit_crc_cmd_stat_group()
 
-            if self.DATA_TYPE == self.DATA_TYPE_EQUAL_O_STRING:
+            if self.DATA_TYPE == self.DATA_TYPE_0h:
                 address_8bit_register_16bit_group, stat_8_bit_group = self.decoder.get_register_16_bit_address_stat_8_bit_group()
                 read_write = address_8bit_register_16bit_group.read_write
                 register_name = address_8bit_register_16bit_group.register_name

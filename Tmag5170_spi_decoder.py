@@ -605,29 +605,35 @@ class Hla(HighLevelAnalyzer):
     result_types = {
         'tmag5170_regular': {
             'format': \
-            'MOSI:{{data.mosi}}, \
+            'MOSI:{{data.mosi_frame}}, \
             crc_mosi_expected: {{data.mosi_crc_calculated}},\
+            crc_mosi_from_bus: {{data.mosi_crc_from_bus}},\
             {{data.crc_mosi_correct}}, \
+            \nMISO:{{data.miso_frame}}, \
+            crc_miso_expected: {{data.miso_crc_calculated}}, \
+            crc_miso_from_bus: {{data.miso_crc_from_bus}}, \
+            {{data.crc_miso_correct}}, \
             R/W:{{data.read_write}}, \
             RegAddr:{{data.register_address}} - {{data.register_name}}, \
-            \nMISO:{{data.miso}}, \
-            crc_miso_expected: {{data.miso_crc_calculated}}, \
-            {{data.crc_miso_correct}}, \
+            reg_val:{{data.register_value}}, \
             decoded_reg_val:{{data.register_decoding}}, \
             FrameCnt_debug:{{data.FrameCnt_debug}}'\
         },
         'tmag5170_special': {
             'format': \
-            'MOSI:{{data.mosi}}, \
+            'MOSI:{{data.mosi_frame}}, \
             crc_mosi_expected: {{data.mosi_crc_calculated}},\
+            crc_mosi_from_bus: {{data.mosi_crc_from_bus}},\
             {{data.crc_mosi_correct}}, \
-            \nMISO:{{data.miso}}, \
+            \nMISO:{{data.miso_frame}}, \
             crc_miso_expected: {{data.miso_crc_calculated}}, \
+            crc_miso_from_bus: {{data.miso_crc_from_bus}}, \
             {{data.crc_miso_correct}}, \
             ch1_value:{{data.ch1_value}}, \
             ch2_value:{{data.ch2_value}}, \
             R/W:{{data.read_write}}, \
             RegAddr:{{data.register_address}} - {{data.register_name}}, \
+            reg_val:{{data.register_value}}, \
             decoded_reg_val:{{data.register_decoding}}, \
             FrameCnt_debug:{{data.FrameCnt_debug}}'\
         }

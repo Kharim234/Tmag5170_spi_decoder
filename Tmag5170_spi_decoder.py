@@ -7,7 +7,7 @@ from enum import Enum
 
 CRC_OK_TOKEN = "CRC_OK"
 CRC_ERROR_TOKEN = "CRC_ERROR"
-LENGTH_ERROR_TOKEN = "Length error"
+LENGTH_ERROR_TOKEN = "Frame length error"
 WRITE_REGISTER_TOKEN = "write"
 READ_REGISTER_TOKEN = "read"
 
@@ -561,8 +561,12 @@ f"[15-6] RESERVED: {int_to_hex_string(RESERVED_15_6)}, \
 
 
     def set_mosi_miso_raw_data(self, mosi_raw_data, miso_raw_data):
+            err = ""
             self.mosi_value = tmga5170_frame_decoder.convert_tmag5170_bytes_to_int(mosi_raw_data)
             self.miso_value = tmga5170_frame_decoder.convert_tmag5170_bytes_to_int(miso_raw_data)
+            if self.mosi_value  == None or self.miso_value == None:
+                err = LENGTH_ERROR_TOKEN
+            return err
 
     @staticmethod
     def convert_uint_to_mosi_miso_str(value: int):
@@ -834,7 +838,8 @@ class Hla(HighLevelAnalyzer):
     result_types = {
         'tmag5170_regular': {
             'format': \
-            '{{data.register_name}}-{{data.register_address}}, \
+            '{{data.length_err_msg}} \
+            {{data.register_name}}-{{data.register_address}}, \
             R/W:{{data.read_write}}, \
             mosi:{{data.crc_mosi_correct}}, \
             miso:{{data.crc_miso_correct}}, \
@@ -848,7 +853,8 @@ class Hla(HighLevelAnalyzer):
         },
         'tmag5170_special': {
             'format': \
-            '{{data.register_name}}-{{data.register_address}}, \
+            '{{data.length_err_msg}} \
+            {{data.register_name}}-{{data.register_address}}, \
             ch1_value:{{data.ch1_value}} {{data.ch1_si_value_str}}, \
             ch2_value:{{data.ch2_value}} {{data.ch2_si_value_str}}, \
             mosi:{{data.crc_mosi_correct}}, \
@@ -888,6 +894,7 @@ class Hla(HighLevelAnalyzer):
 
     def generateAnalyzerFrame(self):
 
+            length_err_msg = self.decoder.set_mosi_miso_raw_data(self.frame_data_MOSI, self.frame_data_MISO)
             mosi_frame, miso_frame = self.decoder.get_mosi_miso_str()
             miso_crc_group, mosi_crc_group, cmd_stat_4_bit_group = self.decoder.get_4_bit_crc_cmd_stat_group()
 
@@ -898,6 +905,7 @@ class Hla(HighLevelAnalyzer):
 
                 AnalyzerFrameType = 'tmag5170_regular'
                 AnalyzerFrameDictionary = {\
+                        'length_err_msg':length_err_msg,                                                                    \
                         'mosi_frame':mosi_frame,                                                                            \
                         'mosi_crc_calculated':int_to_hex_string(mosi_crc_group.crc_calculated),                             \
                         'mosi_crc_from_bus':int_to_hex_string(mosi_crc_group.crc_from_bus),                                 \
@@ -935,6 +943,7 @@ class Hla(HighLevelAnalyzer):
 
                 AnalyzerFrameType = 'tmag5170_special'
                 AnalyzerFrameDictionary = {\
+                        'length_err_msg':length_err_msg,                                                                    \
                         'mosi_frame':mosi_frame,                                                                            \
                         'mosi_crc_calculated':int_to_hex_string(mosi_crc_group.crc_calculated),                             \
                         'mosi_crc_from_bus':int_to_hex_string(mosi_crc_group.crc_from_bus),                                 \
@@ -983,7 +992,6 @@ class Hla(HighLevelAnalyzer):
 
         if(frame.type == "disable"):
             self.end_frame_label_time = frame.start_time
-            self.decoder.set_mosi_miso_raw_data(self.frame_data_MOSI, self.frame_data_MISO)
             retVal = self.generateAnalyzerFrame()
 
 

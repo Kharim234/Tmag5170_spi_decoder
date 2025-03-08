@@ -7,7 +7,7 @@ from enum import Enum
 
 CRC_OK_TOKEN = "CRC_OK"
 CRC_ERROR_TOKEN = "CRC_ERROR"
-LENGTH_ERROR_TOKEN = "Length error"
+LENGTH_ERROR_TOKEN = "Frame length error"
 WRITE_REGISTER_TOKEN = "write"
 READ_REGISTER_TOKEN = "read"
 
@@ -69,18 +69,47 @@ def int_none_verificatio(value:int):
 class tmga5170_frame_decoder:
     class DataType(Enum):
         default_32bit_access = 0
-        magnetic_field = 1
-        magnetic_field_temperature = 2
-        angle_magnitude = 3
+        magnetic_field_XY = 1
+        magnetic_field_XZ = 2
+        magnetic_field_ZY = 3
+        magnetic_field_temperature_XT = 4
+        magnetic_field_temperature_YT = 5
+        magnetic_field_temperature_ZT = 6
+        angle_magnitude = 7
 
+    class Br_range(Enum):
+        TMAG5170A1_50mT_0h = 0
+        TMAG5170A1_25mT_1h = 1
+        TMAG5170A1_100mT_2h = 2
+
+        TMAG5170A2_150mT_0h = 3
+        TMAG5170A2_75mT_1h = 4
+        TMAG5170A2_300mT_2h = 5
+
+        TMAG5170_NotSelected = 6
+
+    Br_range_mapping = { 
+        Br_range.TMAG5170A1_50mT_0h : 50,
+        Br_range.TMAG5170A1_25mT_1h : 25,
+        Br_range.TMAG5170A1_100mT_2h : 100,
+
+        Br_range.TMAG5170A2_150mT_0h : 150,
+        Br_range.TMAG5170A2_75mT_1h : 75,
+        Br_range.TMAG5170A2_300mT_2h : 300
+        }
+    
     __tmag5170_mapping_type = collections.namedtuple('__tmag5170_mapping_type', ['Acronym', 'DecodingFunction'])
     crc_4_bit_group_type = collections.namedtuple('crc_4_bit_group_type', ['crc_status','crc_calculated','crc_from_bus'])
     cmd_stat_4_bit_group_type = collections.namedtuple('cmd_stat_4_bit_group_type', ['cmd3', 'cmd2', 'cmd1', 'cmd0', 'error_stat', 'stat_2_0'])
     address_8bit_register_16bit_group_type = collections.namedtuple('address_8bit_register_16bit_group_type', ['read_write','register_address','register_name','register_decoding','register_value'])
     stat_8_bit_group_type = collections.namedtuple('stat_8_bit_group_type', ['prev_crc_stat','cfg_reset_stat','sys_alrt_status1_stat','afe_alrt_status0_stat','x_stat','y_stat','z_stat','t_stat'])
-    data_24_bit_group_type = collections.namedtuple('data_24_bit_group_type', ['read_write', 'ch1_value', 'ch2_value','register_address','register_name','register_decoding','register_value'])
+    data_24_bit_group_type = collections.namedtuple('data_24_bit_group_type', ['read_write', 'ch1_value', 'ch2_value','register_address','register_name','register_decoding','register_value', 'ch1_si_value_str', 'ch2_si_value_str'])
 
-    def __init__(self, enable__cmd_stat_4_bit_group = True, enable__stat_8_bit_group = True, crc_enabled = True, data_type: DataType  = DataType.default_32bit_access):
+    def __init__(self, enable__cmd_stat_4_bit_group = True, enable__stat_8_bit_group = True, crc_enabled = True, 
+                 data_type: DataType  = DataType.default_32bit_access, 
+                 Br_X_axis_enum :Br_range = Br_range.TMAG5170_NotSelected,
+                 Br_Y_axis_enum :Br_range = Br_range.TMAG5170_NotSelected,
+                 Br_Z_axis_enum :Br_range = Br_range.TMAG5170_NotSelected):
         self.__Tmag5170_register_mapping = {
             0x00: self.__tmag5170_mapping_type("DEVICE_CONFIG"    ,    self.__DEVICE_CONFIG_DecodingFunction)     ,
             0x01: self.__tmag5170_mapping_type("SENSOR_CONFIG"    ,    self.__SENSOR_CONFIG_DecodingFunction)     ,
@@ -110,6 +139,9 @@ class tmga5170_frame_decoder:
         self.enable__stat_8_bit_group = enable__stat_8_bit_group
         self.crc_enabled = crc_enabled
         self.data_type = data_type
+        self.Br_X_axis_enum = Br_X_axis_enum
+        self.Br_Y_axis_enum = Br_Y_axis_enum
+        self.Br_Z_axis_enum = Br_Z_axis_enum
     @staticmethod 
     def __MAG_OFFSET_CONFIG_DecodingFunction(data: int):
         OFFSET_SELECTION_15_14 = get_masked_value(data, 14,    0x0003)
@@ -249,47 +281,134 @@ f"[15-14] RESERVED: {int_to_hex_string(RESERVED_15_14)}, \
 [1-0] ALRT_STATUS: {int_to_hex_string(ALRT_STATUS_1_0)}"
 
     @staticmethod
-    def __X_THRX_CONFIG_DecodingFunction(data: int):
+    def convert_magnetic_field_threshold_to_miliTeslas(mag_thrx: int, Br_range: Br_range):
+        magnetic_field_threshold = None
+        if Br_range in tmga5170_frame_decoder.Br_range_mapping:
+            Br = tmga5170_frame_decoder.Br_range_mapping[Br_range]
+            magnetic_field_threshold = mag_thrx * (Br/128)
+        return magnetic_field_threshold
+
+    def __X_THRX_CONFIG_DecodingFunction(self, data: int):
         X_HI_THRESHOLD_15_8 = uint8_to_int8(get_masked_value(data, 8, 0xFF))
         X_LO_THRESHOLD_7_0  = uint8_to_int8(get_masked_value(data, 0, 0xFF))
-        return f"[15-8] X_HI_THRESHOLD: {X_HI_THRESHOLD_15_8}, [7-0] X_LO_THRESHOLD: {X_LO_THRESHOLD_7_0}"
+        threshold_si = tmga5170_frame_decoder.convert_magnetic_field_threshold_to_miliTeslas(X_HI_THRESHOLD_15_8, self.Br_X_axis_enum)
+        hi_threshold_str = tmga5170_frame_decoder.get_magnetic_field_str(threshold_si)
+        threshold_si = tmga5170_frame_decoder.convert_magnetic_field_threshold_to_miliTeslas(X_LO_THRESHOLD_7_0, self.Br_X_axis_enum)
+        lo_threshold_str = tmga5170_frame_decoder.get_magnetic_field_str(threshold_si)
+        return f"[15-8] X_HI_THRESHOLD: {X_HI_THRESHOLD_15_8} {hi_threshold_str}, [7-0] X_LO_THRESHOLD: {X_LO_THRESHOLD_7_0} {lo_threshold_str}"
 
-    @staticmethod
-    def __Y_THRX_CONFIG_DecodingFunction(data: int):
+    def __Y_THRX_CONFIG_DecodingFunction(self, data: int):
         Y_HI_THRESHOLD_15_8 = uint8_to_int8(get_masked_value(data, 8, 0xFF))
         Y_LO_THRESHOLD_7_0  = uint8_to_int8(get_masked_value(data, 0, 0xFF))
-        return f"[15-8] Y_HI_THRESHOLD: {Y_HI_THRESHOLD_15_8}, [7-0] Y_LO_THRESHOLD: {Y_LO_THRESHOLD_7_0}"
+        threshold_si = tmga5170_frame_decoder.convert_magnetic_field_threshold_to_miliTeslas(Y_HI_THRESHOLD_15_8, self.Br_X_axis_enum)
+        hi_threshold_str = tmga5170_frame_decoder.get_magnetic_field_str(threshold_si)
+        threshold_si = tmga5170_frame_decoder.convert_magnetic_field_threshold_to_miliTeslas(Y_LO_THRESHOLD_7_0, self.Br_X_axis_enum)
+        lo_threshold_str = tmga5170_frame_decoder.get_magnetic_field_str(threshold_si)
+        return f"[15-8] Y_HI_THRESHOLD: {Y_HI_THRESHOLD_15_8} {hi_threshold_str}, [7-0] Y_LO_THRESHOLD: {Y_LO_THRESHOLD_7_0} {lo_threshold_str}"
 
-    @staticmethod
-    def __Z_THRX_CONFIG_DecodingFunction(data: int):
+    def __Z_THRX_CONFIG_DecodingFunction(self, data: int):
         Z_HI_THRESHOLD_15_8 = uint8_to_int8(get_masked_value(data, 8, 0xFF))
         Z_LO_THRESHOLD_7_0  = uint8_to_int8(get_masked_value(data, 0, 0xFF))
-        return f"[15-8] Z_HI_THRESHOLD: {Z_HI_THRESHOLD_15_8}, [7-0] Z_LO_THRESHOLD: {Z_LO_THRESHOLD_7_0}"
+        threshold_si = tmga5170_frame_decoder.convert_magnetic_field_threshold_to_miliTeslas(Z_HI_THRESHOLD_15_8, self.Br_X_axis_enum)
+        hi_threshold_str = tmga5170_frame_decoder.get_magnetic_field_str(threshold_si)
+        threshold_si = tmga5170_frame_decoder.convert_magnetic_field_threshold_to_miliTeslas(Z_LO_THRESHOLD_7_0, self.Br_X_axis_enum)
+        lo_threshold_str = tmga5170_frame_decoder.get_magnetic_field_str(threshold_si)
+        return f"[15-8] Z_HI_THRESHOLD: {Z_HI_THRESHOLD_15_8} {hi_threshold_str}, [7-0] Z_LO_THRESHOLD: {Z_LO_THRESHOLD_7_0} {lo_threshold_str}"
 
     @staticmethod
-    def __T_THRX_CONFIG_DecodingFunction(data: int):
+    def convert_temparature_threshold_to_celsius(temp_thrx: int, default_value: int, default_temp_value):
+        TEMP_CONSTANT_VALUE = 4.267
+        temperature_field_threshold = ((temp_thrx - default_value) * TEMP_CONSTANT_VALUE) + default_temp_value
+        return temperature_field_threshold
+
+    def __T_THRX_CONFIG_DecodingFunction(self, data: int):
+        DEFAULT_VALUE_HI_THR = 0x67
+        DEFAULT_VALUE_LO_THR = 0x32
+
+        DEFAULT_VALUE_HI_THR_TEMP = 172
+        DEFAULT_VALUE_LO_THR_TEMP = -53
+
         T_HI_THRESHOLD_15_8 = uint8_to_int8(get_masked_value(data, 8, 0xFF))
         T_LO_THRESHOLD_7_0  = uint8_to_int8(get_masked_value(data, 0, 0xFF))
-        return f"[15-8] T_HI_THRESHOLD: {T_HI_THRESHOLD_15_8}, [7-0] T_LO_THRESHOLD: {T_LO_THRESHOLD_7_0}"
+        threshold_si = tmga5170_frame_decoder.convert_temparature_threshold_to_celsius(T_HI_THRESHOLD_15_8, DEFAULT_VALUE_HI_THR, DEFAULT_VALUE_HI_THR_TEMP)
+        hi_threshold_str = tmga5170_frame_decoder.get_temperature_str(threshold_si)
+        threshold_si = tmga5170_frame_decoder.convert_temparature_threshold_to_celsius(T_LO_THRESHOLD_7_0, DEFAULT_VALUE_LO_THR, DEFAULT_VALUE_LO_THR_TEMP)
+        lo_threshold_str = tmga5170_frame_decoder.get_temperature_str(threshold_si)
+        return f"[15-8] T_HI_THRESHOLD: {T_HI_THRESHOLD_15_8} {hi_threshold_str}, [7-0] T_LO_THRESHOLD: {T_LO_THRESHOLD_7_0} {lo_threshold_str}"
 
     @staticmethod
-    def __X_CH_RESULT_DecodingFunction(data: int):
+    def convert_raw_magnetic_field_to_miliTeslas(mag_raw: int, data_type : DataType, Br_range: Br_range):
+        magnetic_field = None
+        if Br_range in tmga5170_frame_decoder.Br_range_mapping:
+            Br = tmga5170_frame_decoder.Br_range_mapping[Br_range]
+            if data_type == tmga5170_frame_decoder.DataType.default_32bit_access:
+                magnetic_field = (mag_raw * 2 * Br)/(pow(2,16))
+
+            else:
+                magnetic_field = (mag_raw * 2 * Br)/(pow(2,12))
+
+        return magnetic_field
+    
+    @staticmethod
+    def get_magnetic_field_str(magnetic_field)->str:
+        if magnetic_field != None:
+            magnetic_field_str = f"[{magnetic_field:0.2f} mT]"
+        else:
+            magnetic_field_str = ""
+
+        return magnetic_field_str
+
+    def __X_CH_RESULT_DecodingFunction(self, data: int):
+
         int_val = uint16_to_int16(data)
-        return f"[15-0] X_CH_RESULT: {int_val}"
+        magnetic_field = tmga5170_frame_decoder.convert_raw_magnetic_field_to_miliTeslas(int_val, tmga5170_frame_decoder.DataType.default_32bit_access, self.Br_X_axis_enum)
+        magnetic_field_str = tmga5170_frame_decoder.get_magnetic_field_str(magnetic_field)
+
+        return f"[15-0] X_CH_RESULT: {int_val} {magnetic_field_str}"
+
+    def __Y_CH_RESULT_DecodingFunction(self, data: int):
+
+        int_val = uint16_to_int16(data)
+        magnetic_field = tmga5170_frame_decoder.convert_raw_magnetic_field_to_miliTeslas(int_val, tmga5170_frame_decoder.DataType.default_32bit_access, self.Br_Y_axis_enum)
+        magnetic_field_str = tmga5170_frame_decoder.get_magnetic_field_str(magnetic_field)
+
+        return f"[15-0] Y_CH_RESULT: {int_val} {magnetic_field_str}"
+
+    def __Z_CH_RESULT_DecodingFunction(self, data: int):
+
+        int_val = uint16_to_int16(data)
+        magnetic_field = tmga5170_frame_decoder.convert_raw_magnetic_field_to_miliTeslas(int_val, tmga5170_frame_decoder.DataType.default_32bit_access, self.Br_Z_axis_enum)
+        magnetic_field_str = tmga5170_frame_decoder.get_magnetic_field_str(magnetic_field)
+
+        return f"[15-0] Z_CH_RESULT: {int_val} {magnetic_field_str}"
+    
+    @staticmethod
+    def convert_raw_temp_to_celsius(temp_raw: int, data_type : DataType)->float:
+        #TYP values are used here
+        TadcT0 = 17522
+        TadcRes = 60
+        TsensT0 = 25
+        if data_type == tmga5170_frame_decoder.DataType.default_32bit_access:
+            temperature = TsensT0 + ((temp_raw - TadcT0)/TadcRes)
+
+        else:
+            temperature = TsensT0 + ((16*(temp_raw - (TadcT0/16)))/TadcRes)
+        return temperature
 
     @staticmethod
-    def __Y_CH_RESULT_DecodingFunction(data: int):
-        int_val = uint16_to_int16(data)
-        return f"[15-0] Y_CH_RESULT: {int_val}"
+    def get_temperature_str(temp)->str:
+        if temp != None:
+            temperature_str = f"[{temp:0.2f} Celsius]"
+        else:
+            temperature_str = ""
 
-    @staticmethod
-    def __Z_CH_RESULT_DecodingFunction(data: int):
-        int_val = uint16_to_int16(data)
-        return f"[15-0] Z_CH_RESULT: {int_val}"
+        return temperature_str
 
     @staticmethod
     def __TEMP_RESULT_DecodingFunction(data: int):
-        return f"[15-0] TEMP_RESULT: {data}"
+        temperature = tmga5170_frame_decoder.convert_raw_temp_to_celsius(data, tmga5170_frame_decoder.DataType.default_32bit_access)
+        temperature_str = tmga5170_frame_decoder.get_temperature_str(temperature)
+        return f"[15-0] TEMP_RESULT: {data} {temperature_str}"
 
     @staticmethod
     def __AFE_STATUS_DecodingFunction(data: int):
@@ -346,8 +465,35 @@ f"[15] ALRT_LVL: {int_to_hex_string(ALRT_LVL_15)}, \
 [0] XCH_THX: {int_to_hex_string(XCH_THX_0)}"
 
     @staticmethod
+    def convert_raw_angle_to_deg(angle_raw: int, data_type : DataType)->float:
+
+        if data_type == tmga5170_frame_decoder.DataType.default_32bit_access:
+            angle_frac = angle_raw & 0x0F
+            angle_frac = angle_frac/16
+            angle_integer = (angle_raw >> 4) & 0x01FF
+
+        else:
+            angle_frac = angle_raw & 0x07
+            angle_frac = angle_frac/8
+            angle_integer = (angle_raw >> 3) & 0x01FF
+
+        angle = angle_integer + angle_frac
+        return angle
+
+    @staticmethod
+    def get_angle_str(angle)->str:
+        if angle != None:
+            angle_str = f"[{angle:0.2f} Degrees]"
+        else:
+            angle_str = ""
+
+        return angle_str
+
+    @staticmethod
     def __ANGLE_RESULT_DecodingFunction(data: int):
-        return f"[15-0] ANGLE_RESULT: {data}"
+        angle = tmga5170_frame_decoder.convert_raw_angle_to_deg(data, tmga5170_frame_decoder.DataType.default_32bit_access)
+        angle_str = tmga5170_frame_decoder.get_angle_str(angle)
+        return f"[15-0] ANGLE_RESULT: {data} {angle_str}"
 
     @staticmethod
     def __TEST_CONFIG_DecodingFunction(data: int):
@@ -415,8 +561,12 @@ f"[15-6] RESERVED: {int_to_hex_string(RESERVED_15_6)}, \
 
 
     def set_mosi_miso_raw_data(self, mosi_raw_data, miso_raw_data):
+            err = ""
             self.mosi_value = tmga5170_frame_decoder.convert_tmag5170_bytes_to_int(mosi_raw_data)
             self.miso_value = tmga5170_frame_decoder.convert_tmag5170_bytes_to_int(miso_raw_data)
+            if self.mosi_value  == None or self.miso_value == None:
+                err = LENGTH_ERROR_TOKEN
+            return err
 
     @staticmethod
     def convert_uint_to_mosi_miso_str(value: int):
@@ -535,7 +685,59 @@ f"[15-6] RESERVED: {int_to_hex_string(RESERVED_15_6)}, \
         else:
             stat_8_bit_group = tmga5170_frame_decoder.stat_8_bit_group_type(None, None, None, None, None, None, None, None)
         return address_8bit_register_16bit_group, stat_8_bit_group
+    
+    def convert_data_to_raw_and_SI_units_24bit(self, data_type, all_12_bits_ch1, all_12_bits_ch2):
+
+        ch1_si_value_str = ""
+        ch2_si_value_str = ""
+        Br_range_ch1 = None
+        Br_range_ch2 = None
+        ch1_value = None
+        ch2_value = None
+        temperature_to_conversion = False
+        data_type_correct = True
+        if data_type == self.DataType.magnetic_field_XY:
+            Br_range_ch1 = self.Br_X_axis_enum
+            Br_range_ch2 = self.Br_Y_axis_enum
+        elif data_type == self.DataType.magnetic_field_XZ:
+            Br_range_ch1 = self.Br_X_axis_enum
+            Br_range_ch2 = self.Br_Z_axis_enum
+        elif data_type ==  self.DataType.magnetic_field_ZY:
+            Br_range_ch1 = self.Br_Z_axis_enum
+            Br_range_ch2 = self.Br_Y_axis_enum
+        elif data_type ==  self.DataType.magnetic_field_temperature_XT:
+            Br_range_ch1 = self.Br_X_axis_enum
+            temperature_to_conversion = True
+        elif data_type ==  self.DataType.magnetic_field_temperature_YT:
+            Br_range_ch1 = self.Br_X_axis_enum
+            temperature_to_conversion = True
+        elif data_type ==  self.DataType.magnetic_field_temperature_ZT:
+            Br_range_ch1 = self.Br_X_axis_enum
+            temperature_to_conversion = True
+        elif data_type ==  self.DataType.angle_magnitude:
+            ch1_value = all_12_bits_ch1
+            ch1_value_deg = tmga5170_frame_decoder.convert_raw_angle_to_deg(ch1_value, data_type)
+            ch1_si_value_str = tmga5170_frame_decoder.get_angle_str(ch1_value_deg)
+            ch2_value = all_12_bits_ch2
+        else:
+            data_type_correct = False
         
+        if data_type_correct == True:
+            if Br_range_ch1 != None:
+                ch1_value = uintX_to_intX_represented_on_Y_bytes(all_12_bits_ch1, 12, 2)
+                ch1_value_mT = tmga5170_frame_decoder.convert_raw_magnetic_field_to_miliTeslas(ch1_value, data_type, Br_range_ch1)
+                ch1_si_value_str = tmga5170_frame_decoder.get_magnetic_field_str(ch1_value_mT)
+            if Br_range_ch2 != None:
+                ch2_value = uintX_to_intX_represented_on_Y_bytes(all_12_bits_ch2, 12, 2)
+                ch2_value_mT = tmga5170_frame_decoder.convert_raw_magnetic_field_to_miliTeslas(ch2_value, data_type, Br_range_ch2)
+                ch2_si_value_str = tmga5170_frame_decoder.get_magnetic_field_str(ch2_value_mT)
+            if temperature_to_conversion == True:
+                ch2_value = all_12_bits_ch2
+                ch2_value_c = tmga5170_frame_decoder.convert_raw_temp_to_celsius(all_12_bits_ch2, data_type)
+                ch2_si_value_str = tmga5170_frame_decoder.get_temperature_str(ch2_value_c)
+
+        return ch1_value, ch2_value, ch1_si_value_str, ch2_si_value_str
+
     def get_24_bit_data_group(self):
         ch1_value = ""
         ch2_value = ""
@@ -544,6 +746,10 @@ f"[15-6] RESERVED: {int_to_hex_string(RESERVED_15_6)}, \
         register_decoding = ""
         register_value = None
         read_write = ""
+        ch1_si_value_str = ""
+        ch2_si_value_str = ""
+
+
 
         if self.mosi_value != None:
             if get_bit(self.mosi_value, READ_WRITE_BIT_POSITION) == 1:
@@ -558,39 +764,44 @@ f"[15-6] RESERVED: {int_to_hex_string(RESERVED_15_6)}, \
         if self.miso_value != None:
             first_4_bits_ch1 = get_masked_value(self.miso_value, 8, 0x0F)
             next_8_bits_ch1 = get_masked_value(self.miso_value, 16, 0xFF)
-            all_12_bits_ch1 = (next_8_bits_ch1<<8) | first_4_bits_ch1
+            all_12_bits_ch1 = (next_8_bits_ch1<<4) | first_4_bits_ch1
 
             first_4_bits_ch2 = get_masked_value(self.miso_value, 12, 0x0F)
             next_8_bits_ch2 = get_masked_value(self.miso_value, 24, 0xFF)
-            all_12_bits_ch2 = (next_8_bits_ch2<<8) | first_4_bits_ch2
-            if self.data_type == self.DataType.magnetic_field:
-                ch1_value = uintX_to_intX_represented_on_Y_bytes(all_12_bits_ch1, 12, 2)
-                ch2_value = uintX_to_intX_represented_on_Y_bytes(all_12_bits_ch2, 12, 2)
-
-            elif self.data_type == self.DataType.magnetic_field_temperature:
-                ch1_value = uintX_to_intX_represented_on_Y_bytes(all_12_bits_ch1, 12, 2)
-                ch2_value = all_12_bits_ch2
-
-            elif self.data_type == self.DataType.angle_magnitude:
-                ch1_value = all_12_bits_ch1
-                ch2_value = all_12_bits_ch2
-
-            else:
-                ch1_value = None
-                ch2_value = None
+            all_12_bits_ch2 = (next_8_bits_ch2<<4) | first_4_bits_ch2
+            ch1_value, ch2_value, ch1_si_value_str, ch2_si_value_str = self.convert_data_to_raw_and_SI_units_24bit(self.data_type, all_12_bits_ch1, all_12_bits_ch2)
 
 
-
-        return tmga5170_frame_decoder.data_24_bit_group_type(read_write, ch1_value, ch2_value, register_address, register_name, register_decoding, register_value)
+        return tmga5170_frame_decoder.data_24_bit_group_type(read_write, ch1_value, ch2_value, register_address, register_name, register_decoding, register_value, ch1_si_value_str, ch2_si_value_str)
 # High level analyzers must subclass the HighLevelAnalyzer class.
 class Hla(HighLevelAnalyzer):
+
+    DATA_TYPE_0h = "DATA_TYPE = 0h, Default 32-bit register access"
+    DATA_TYPE_1h = "DATA_TYPE = 1h = 12-Bit XY data access"
+    DATA_TYPE_2h = "DATA_TYPE = 2h = 12-Bit XZ data access"
+    DATA_TYPE_3h = "DATA_TYPE = 3h = 12-Bit ZY data access"
+    DATA_TYPE_4h = "DATA_TYPE = 4h = 12-Bit XT data access"
+    DATA_TYPE_5h = "DATA_TYPE = 5h = 12-Bit YT data access"
+    DATA_TYPE_6h = "DATA_TYPE = 6h = 12-Bit ZT data access"
+    DATA_TYPE_7h = "DATA_TYPE = 7h = 12-Bit AM data access"
+
+    str_data_type_mapping = { 
+        DATA_TYPE_0h : tmga5170_frame_decoder.DataType.default_32bit_access,
+        DATA_TYPE_1h : tmga5170_frame_decoder.DataType.magnetic_field_XY,
+        DATA_TYPE_2h : tmga5170_frame_decoder.DataType.magnetic_field_XZ,
+        DATA_TYPE_3h : tmga5170_frame_decoder.DataType.magnetic_field_ZY,
+        DATA_TYPE_4h : tmga5170_frame_decoder.DataType.magnetic_field_temperature_XT,
+        DATA_TYPE_5h : tmga5170_frame_decoder.DataType.magnetic_field_temperature_YT,
+        DATA_TYPE_6h : tmga5170_frame_decoder.DataType.magnetic_field_temperature_ZT,
+        DATA_TYPE_7h : tmga5170_frame_decoder.DataType.angle_magnitude
+        }
 
     DATA_TYPE_MAGNETIC_FIELD_ONLY_STRING = "DATA_TYPE = 1h-3h, 12-Bit XY/XZ/ZY data access"
     DATA_TYPE_MAGNETIC_FIELD_AND_TEMPERATURE_STRING = "DATA_TYPE = 4h-6h, 12-Bit XT/YT/ZT data access"
     DATA_TYPE_ANGLE_AND_MAGNITUDE_STRING = "DATA_TYPE = 7h, 12-Bit AM data access"
-    DATA_TYPE_EQUAL_O_STRING = "DATA_TYPE = 0h, Default 32-bit register access"
+    
     #Only data type to which I have data is 0x00h due that others data_type are currently not implemented
-    DATA_TYPE = ChoicesSetting(choices=(DATA_TYPE_EQUAL_O_STRING, DATA_TYPE_MAGNETIC_FIELD_ONLY_STRING, DATA_TYPE_MAGNETIC_FIELD_AND_TEMPERATURE_STRING, DATA_TYPE_ANGLE_AND_MAGNITUDE_STRING))
+    DATA_TYPE = ChoicesSetting(choices=(DATA_TYPE_0h, DATA_TYPE_1h, DATA_TYPE_2h, DATA_TYPE_3h, DATA_TYPE_4h, DATA_TYPE_5h, DATA_TYPE_6h, DATA_TYPE_7h))
 
     CRC_EN_STRING = "CRC_DIS = 0h, CRC enabled in SPI communication"
     CRC_DIS_STRING = "CRC_DIS = 1h, CRC disabled in SPI communication"
@@ -598,44 +809,64 @@ class Hla(HighLevelAnalyzer):
     CRC_DIS = ChoicesSetting(choices=(CRC_EN_STRING,CRC_DIS_STRING))
 
 
+    A1_50MT = "±50mT (TMAG5170A1)"
+    A1_25MT = "±25mT (TMAG5170A1)"
+    A1_100MT = "±100mT (TMAG5170A1)"
+
+    A2_150MT = "±150mT (TMAG5170A2)"
+    A2_75MT = "±75mT (TMAG5170A2)"
+    A2_300MT = "±300mT (TMAG5170A2)"
+
+    RANGE_NOT_SELECTED = "-"
+
+    str_range_mapping = { 
+        A1_50MT:            tmga5170_frame_decoder.Br_range.TMAG5170A1_50mT_0h ,
+        A1_25MT:            tmga5170_frame_decoder.Br_range.TMAG5170A1_25mT_1h ,
+        A1_100MT:           tmga5170_frame_decoder.Br_range.TMAG5170A1_100mT_2h,
+        A2_150MT:           tmga5170_frame_decoder.Br_range.TMAG5170A2_150mT_0h,
+        A2_75MT:            tmga5170_frame_decoder.Br_range.TMAG5170A2_75mT_1h ,
+        A2_300MT:           tmga5170_frame_decoder.Br_range.TMAG5170A2_300mT_2h,
+        RANGE_NOT_SELECTED: tmga5170_frame_decoder.Br_range.TMAG5170_NotSelected
+        }
 
 
+    X_RANGE = ChoicesSetting(choices=(RANGE_NOT_SELECTED, A2_150MT, A2_75MT, A2_300MT, A1_50MT, A1_25MT, A1_100MT))
+    Y_RANGE = ChoicesSetting(choices=(RANGE_NOT_SELECTED, A2_150MT, A2_75MT, A2_300MT, A1_50MT, A1_25MT, A1_100MT))
+    Z_RANGE = ChoicesSetting(choices=(RANGE_NOT_SELECTED, A2_150MT, A2_75MT, A2_300MT, A1_50MT, A1_25MT, A1_100MT))
 
     # An optional list of types this analyzer produces, providing a way to customize the way frames are displayed in Logic 2.
     result_types = {
         'tmag5170_regular': {
             'format': \
-            'MOSI:{{data.mosi_frame}}, \
+            '{{data.length_err_msg}} \
+            {{data.register_name}}-{{data.register_address}}, \
+            R/W:{{data.read_write}}, \
+            mosi:{{data.crc_mosi_correct}}, \
+            miso:{{data.crc_miso_correct}}, \
+            decoded_reg_val:{{data.register_decoding}}, \
+            FrameCnt_debug:{{data.FrameCnt_debug}},\
             crc_mosi_expected: {{data.mosi_crc_calculated}},\
             crc_mosi_from_bus: {{data.mosi_crc_from_bus}},\
-            {{data.crc_mosi_correct}}, \
-            \nMISO:{{data.miso_frame}}, \
             crc_miso_expected: {{data.miso_crc_calculated}}, \
             crc_miso_from_bus: {{data.miso_crc_from_bus}}, \
-            {{data.crc_miso_correct}}, \
-            R/W:{{data.read_write}}, \
-            RegAddr:{{data.register_address}} - {{data.register_name}}, \
-            reg_val:{{data.register_value}}, \
-            decoded_reg_val:{{data.register_decoding}}, \
-            FrameCnt_debug:{{data.FrameCnt_debug}}'\
+            reg_val:{{data.register_value}}' \
         },
         'tmag5170_special': {
             'format': \
-            'MOSI:{{data.mosi_frame}}, \
+            '{{data.length_err_msg}} \
+            {{data.register_name}}-{{data.register_address}}, \
+            ch1_value:{{data.ch1_value}} {{data.ch1_si_value_str}}, \
+            ch2_value:{{data.ch2_value}} {{data.ch2_si_value_str}}, \
+            mosi:{{data.crc_mosi_correct}}, \
+            miso:{{data.crc_miso_correct}}, \
+            R/W:{{data.read_write}}, \
+            decoded_reg_val:{{data.register_decoding}}, \
+            FrameCnt_debug:{{data.FrameCnt_debug}},\
             crc_mosi_expected: {{data.mosi_crc_calculated}},\
             crc_mosi_from_bus: {{data.mosi_crc_from_bus}},\
-            {{data.crc_mosi_correct}}, \
-            \nMISO:{{data.miso_frame}}, \
             crc_miso_expected: {{data.miso_crc_calculated}}, \
-            crc_miso_from_bus: {{data.miso_crc_from_bus}}, \
-            {{data.crc_miso_correct}}, \
-            ch1_value:{{data.ch1_value}}, \
-            ch2_value:{{data.ch2_value}}, \
-            R/W:{{data.read_write}}, \
-            RegAddr:{{data.register_address}} - {{data.register_name}}, \
-            reg_val:{{data.register_value}}, \
-            decoded_reg_val:{{data.register_decoding}}, \
-            FrameCnt_debug:{{data.FrameCnt_debug}}'\
+            crc_miso_from_bus: {{data.miso_crc_from_bus}},\
+            reg_val:{{data.register_value}}' \
         }
     }
     
@@ -648,25 +879,10 @@ class Hla(HighLevelAnalyzer):
         Settings can be accessed using the same name used above.
         '''
 
-        if self.DATA_TYPE == self.DATA_TYPE_EQUAL_O_STRING:
-            data_type_var = tmga5170_frame_decoder.DataType.default_32bit_access
-
-        elif self.DATA_TYPE == self.DATA_TYPE_MAGNETIC_FIELD_ONLY_STRING:
-            data_type_var = tmga5170_frame_decoder.DataType.magnetic_field
-
-        elif self.DATA_TYPE == self.DATA_TYPE_MAGNETIC_FIELD_AND_TEMPERATURE_STRING:
-            data_type_var = tmga5170_frame_decoder.DataType.magnetic_field_temperature
-
-        elif self.DATA_TYPE == self.DATA_TYPE_ANGLE_AND_MAGNITUDE_STRING:
-            data_type_var = tmga5170_frame_decoder.DataType.angle_magnitude
-
-        else:
-            raise Exception("Incorrect DATA_TYPE settings") 
-
-
-
-
-        self.decoder = tmga5170_frame_decoder(data_type = data_type_var)
+        self.decoder = tmga5170_frame_decoder(data_type = self.str_data_type_mapping[self.DATA_TYPE], 
+                                              Br_X_axis_enum = self.str_range_mapping[self.X_RANGE], 
+                                              Br_Y_axis_enum = self.str_range_mapping[self.Y_RANGE], 
+                                              Br_Z_axis_enum = self.str_range_mapping[self.Z_RANGE])
         print("Settings:", self.DATA_TYPE,
               self.CRC_DIS)
 
@@ -678,16 +894,18 @@ class Hla(HighLevelAnalyzer):
 
     def generateAnalyzerFrame(self):
 
+            length_err_msg = self.decoder.set_mosi_miso_raw_data(self.frame_data_MOSI, self.frame_data_MISO)
             mosi_frame, miso_frame = self.decoder.get_mosi_miso_str()
             miso_crc_group, mosi_crc_group, cmd_stat_4_bit_group = self.decoder.get_4_bit_crc_cmd_stat_group()
 
-            if self.DATA_TYPE == self.DATA_TYPE_EQUAL_O_STRING:
+            if self.DATA_TYPE == self.DATA_TYPE_0h:
                 address_8bit_register_16bit_group, stat_8_bit_group = self.decoder.get_register_16_bit_address_stat_8_bit_group()
                 read_write = address_8bit_register_16bit_group.read_write
                 register_name = address_8bit_register_16bit_group.register_name
 
                 AnalyzerFrameType = 'tmag5170_regular'
                 AnalyzerFrameDictionary = {\
+                        'length_err_msg':length_err_msg,                                                                    \
                         'mosi_frame':mosi_frame,                                                                            \
                         'mosi_crc_calculated':int_to_hex_string(mosi_crc_group.crc_calculated),                             \
                         'mosi_crc_from_bus':int_to_hex_string(mosi_crc_group.crc_from_bus),                                 \
@@ -725,6 +943,7 @@ class Hla(HighLevelAnalyzer):
 
                 AnalyzerFrameType = 'tmag5170_special'
                 AnalyzerFrameDictionary = {\
+                        'length_err_msg':length_err_msg,                                                                    \
                         'mosi_frame':mosi_frame,                                                                            \
                         'mosi_crc_calculated':int_to_hex_string(mosi_crc_group.crc_calculated),                             \
                         'mosi_crc_from_bus':int_to_hex_string(mosi_crc_group.crc_from_bus),                                 \
@@ -739,7 +958,9 @@ class Hla(HighLevelAnalyzer):
                         'register_value':int_to_hex_string(data_24_bit_group.register_value, 4),                            \
                         'register_decoding':data_24_bit_group.register_decoding,                                            \
                         'ch1_value':data_24_bit_group.ch1_value,                                                            \
+                        'ch1_si_value_str':data_24_bit_group.ch1_si_value_str,                                              \
                         'ch2_value':data_24_bit_group.ch2_value,                                                            \
+                        'ch2_si_value_str':data_24_bit_group.ch2_si_value_str,                                              \
                         'stat_2_0':int_to_hex_string(cmd_stat_4_bit_group.stat_2_0),                                        \
                         'error_stat':int_to_hex_string(cmd_stat_4_bit_group.error_stat),                                    \
                         'cmd3':int_to_hex_string(cmd_stat_4_bit_group.cmd3),                                                \
@@ -749,7 +970,7 @@ class Hla(HighLevelAnalyzer):
                         'FrameCnt_debug':self.counter,                                                                      \
                 }
             retVal = AnalyzerFrame(AnalyzerFrameType, self.start_frame_label_time, self.end_frame_label_time, AnalyzerFrameDictionary)
-            print(f"FrameCnt_debug: {self.counter: >6}, mosi_f: {mosi_frame: >10}, crc_mosi: {mosi_crc_group.crc_status: >{len(CRC_ERROR_TOKEN)}}, miso_f: {miso_frame: >10}, crc_miso: {miso_crc_group.crc_status: >{len(CRC_ERROR_TOKEN)}}, read_write: {read_write: >6} reg name:{register_name}")
+            print(f"FrameCnt_debug: {self.counter: >6}, mosi_f: {mosi_frame: >10}, crc_mosi: {mosi_crc_group.crc_status: >{len(CRC_ERROR_TOKEN)}}, miso_f: {miso_frame: >10}, crc_miso: {miso_crc_group.crc_status: >{len(CRC_ERROR_TOKEN)}}, read_write: {read_write: >6}, reg name:{register_name}")
             self.counter = self.counter + 1
             self.end_frame_label_time = None
             self.start_frame_label_time = None
@@ -771,7 +992,6 @@ class Hla(HighLevelAnalyzer):
 
         if(frame.type == "disable"):
             self.end_frame_label_time = frame.start_time
-            self.decoder.set_mosi_miso_raw_data(self.frame_data_MOSI, self.frame_data_MISO)
             retVal = self.generateAnalyzerFrame()
 
 

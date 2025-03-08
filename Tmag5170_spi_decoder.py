@@ -803,10 +803,10 @@ class Hla(HighLevelAnalyzer):
     #Only data type to which I have data is 0x00h due that others data_type are currently not implemented
     DATA_TYPE = ChoicesSetting(choices=(DATA_TYPE_0h, DATA_TYPE_1h, DATA_TYPE_2h, DATA_TYPE_3h, DATA_TYPE_4h, DATA_TYPE_5h, DATA_TYPE_6h, DATA_TYPE_7h))
 
-    CRC_EN_STRING = "CRC_DIS = 0h, CRC enabled in SPI communication"
-    CRC_DIS_STRING = "CRC_DIS = 1h, CRC disabled in SPI communication"
+    FRAME_LENGTH_VERIF_ENABLED = "Discard data when length of data is not equal to 4 bytes"
+    FRAME_LENGTH_VERIF_DISABLED = "Try to decode next frames when length is at least 4 bytes"
     #Disabling crc is lifting FRAME_STAT check due to lack of data how frames looks in this type I am not implementing this feature
-    CRC_DIS = ChoicesSetting(choices=(CRC_EN_STRING,CRC_DIS_STRING))
+    Frame_length_verification = ChoicesSetting(choices=(FRAME_LENGTH_VERIF_ENABLED,FRAME_LENGTH_VERIF_DISABLED))
 
 
     A1_50MT = "±50mT (TMAG5170A1)"
@@ -883,8 +883,6 @@ class Hla(HighLevelAnalyzer):
                                               Br_X_axis_enum = self.str_range_mapping[self.X_RANGE], 
                                               Br_Y_axis_enum = self.str_range_mapping[self.Y_RANGE], 
                                               Br_Z_axis_enum = self.str_range_mapping[self.Z_RANGE])
-        print("Settings:", self.DATA_TYPE,
-              self.CRC_DIS)
 
         self.frame_data_MISO = bytearray(b'')
         self.frame_data_MOSI = bytearray(b'')
@@ -996,7 +994,7 @@ class Hla(HighLevelAnalyzer):
 
 
         if(frame.type == "result"):
-            if self.CRC_DIS == self.CRC_DIS_STRING:
+            if self.Frame_length_verification == self.FRAME_LENGTH_VERIF_DISABLED:
                 if (len(self.frame_data_MISO) == TMAG5170_SINGLE_FRAME_BYTE_SIZE) or (len(self.frame_data_MOSI) == TMAG5170_SINGLE_FRAME_BYTE_SIZE):
                     self.end_frame_label_time = frame.start_time
                     retVal = self.generateAnalyzerFrame()

@@ -799,15 +799,15 @@ class Hla(HighLevelAnalyzer):
     DATA_TYPE_MAGNETIC_FIELD_ONLY_STRING = "DATA_TYPE = 1h-3h, 12-Bit XY/XZ/ZY data access"
     DATA_TYPE_MAGNETIC_FIELD_AND_TEMPERATURE_STRING = "DATA_TYPE = 4h-6h, 12-Bit XT/YT/ZT data access"
     DATA_TYPE_ANGLE_AND_MAGNITUDE_STRING = "DATA_TYPE = 7h, 12-Bit AM data access"
-    
-    #Only data type to which I have data is 0x00h due that others data_type are currently not implemented
     DATA_TYPE = ChoicesSetting(choices=(DATA_TYPE_0h, DATA_TYPE_1h, DATA_TYPE_2h, DATA_TYPE_3h, DATA_TYPE_4h, DATA_TYPE_5h, DATA_TYPE_6h, DATA_TYPE_7h))
 
     FRAME_LENGTH_VERIF_ENABLED = "Discard data when length of data is not equal to 4 bytes"
     FRAME_LENGTH_VERIF_DISABLED = "Try to decode next frames when length is at least 4 bytes"
-    #Disabling crc is lifting FRAME_STAT check due to lack of data how frames looks in this type I am not implementing this feature
     Frame_length_verification = ChoicesSetting(choices=(FRAME_LENGTH_VERIF_ENABLED,FRAME_LENGTH_VERIF_DISABLED))
 
+    TEMPERATURE_ANGLE_CONVERSION_ENABLED = "Temperature and Angle conversion to SI unit ENABLED"
+    TEMPERATURE_ANGLE_CONVERSION_DISABLED = "Temperature and Angle conversion to SI unit DISABLED"
+    Disable_Temperature_Angle_Conversion = ChoicesSetting(choices=(TEMPERATURE_ANGLE_CONVERSION_ENABLED,TEMPERATURE_ANGLE_CONVERSION_DISABLED))
 
     A1_50MT = "±50mT (TMAG5170A1)"
     A1_25MT = "±25mT (TMAG5170A1)"

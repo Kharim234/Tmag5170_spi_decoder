@@ -7,7 +7,7 @@
   "extensions": {
     "Tmag5170_SPI_decoder": {
       "type": "HighLevelAnalyzer",
-      "entryPoint": "Tmag5170_spi_decoder.Hla"
+      "entryPoint": "main_tmag5170_spi_decoder.Hla"
     }
   }
 }

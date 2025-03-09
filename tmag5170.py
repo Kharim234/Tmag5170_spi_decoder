@@ -63,6 +63,12 @@ def int_none_verificatio(value:int):
     else:
         return value
 class tmga5170_frame_decoder:
+    
+    DEFAULT_VALUE_HI_THR = 0x67
+    DEFAULT_VALUE_LO_THR = 0x32
+
+    DEFAULT_VALUE_HI_THR_TEMP = 172
+    DEFAULT_VALUE_LO_THR_TEMP = -53
     class DataType(Enum):
         default_32bit_access = 0
         magnetic_field_XY = 1
@@ -324,20 +330,14 @@ f"[15-14] RESERVED: {int_to_hex_string(RESERVED_15_14)}, \
         return temperature_field_threshold
 
     def __T_THRX_CONFIG_DecodingFunction(self, data: int):
-        DEFAULT_VALUE_HI_THR = 0x67
-        DEFAULT_VALUE_LO_THR = 0x32
-
-        DEFAULT_VALUE_HI_THR_TEMP = 172
-        DEFAULT_VALUE_LO_THR_TEMP = -53
-
         T_HI_THRESHOLD_15_8 = uint8_to_int8(get_masked_value(data, 8, 0xFF))
         T_LO_THRESHOLD_7_0  = uint8_to_int8(get_masked_value(data, 0, 0xFF))
         hi_threshold_str = ""
         lo_threshold_str = ""
         if self.TempAngleConvEn == tmga5170_frame_decoder.Temp_Angle_Conv.enabled:
-            threshold_si = tmga5170_frame_decoder.convert_temparature_threshold_to_celsius(T_HI_THRESHOLD_15_8, DEFAULT_VALUE_HI_THR, DEFAULT_VALUE_HI_THR_TEMP)
+            threshold_si = tmga5170_frame_decoder.convert_temparature_threshold_to_celsius(T_HI_THRESHOLD_15_8, tmga5170_frame_decoder.DEFAULT_VALUE_HI_THR, tmga5170_frame_decoder.DEFAULT_VALUE_HI_THR_TEMP)
             hi_threshold_str = tmga5170_frame_decoder.get_temperature_str(threshold_si)
-            threshold_si = tmga5170_frame_decoder.convert_temparature_threshold_to_celsius(T_LO_THRESHOLD_7_0, DEFAULT_VALUE_LO_THR, DEFAULT_VALUE_LO_THR_TEMP)
+            threshold_si = tmga5170_frame_decoder.convert_temparature_threshold_to_celsius(T_LO_THRESHOLD_7_0, tmga5170_frame_decoder.DEFAULT_VALUE_LO_THR, tmga5170_frame_decoder.DEFAULT_VALUE_LO_THR_TEMP)
             lo_threshold_str = tmga5170_frame_decoder.get_temperature_str(threshold_si)
         return f"[15-8] T_HI_THRESHOLD: {T_HI_THRESHOLD_15_8} {hi_threshold_str}, [7-0] T_LO_THRESHOLD: {T_LO_THRESHOLD_7_0} {lo_threshold_str}"
 

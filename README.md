@@ -13,6 +13,7 @@
 - Frame_length_verification - Discard data when length of data is not equal to 4 bytes
 - Frame_length_verification - Try to decode next frames when length is at least 4 bytes - If chipselect will be held for multiple frames all data will be decoded [option not tested due to lack of data]
 - X_RANGE/Y_RANGE/Z_RANGE - select proper range if you want to decode magnetic field to mT. Only static configuration handled.
+- Temperature_Angle_Conversion - ENABLED or DISABLED
 3. Conversion to uint or int, depending on type of values used by tmag5170:
 - Magnetic fields measurements are converted into raw data int values, currently module do not perform automatic conversion into SI units - mili teslas
 - Angle measurements are converted into raw data uint values without distinction on decimal and fractional part, currently module do not perform automatic conversion into SI units - degrees
@@ -38,4 +39,3 @@
 
 #### Menu with options
 ![menu](./images/menu.png)
-

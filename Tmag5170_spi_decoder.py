@@ -88,6 +88,10 @@ class tmga5170_frame_decoder:
 
         TMAG5170_NotSelected = 6
 
+    class Temp_Angle_Conv(Enum):
+        enabled = 0
+        disabled = 1
+
     Br_range_mapping = { 
         Br_range.TMAG5170A1_50mT_0h : 50,
         Br_range.TMAG5170A1_25mT_1h : 25,
@@ -109,7 +113,8 @@ class tmga5170_frame_decoder:
                  data_type: DataType  = DataType.default_32bit_access, 
                  Br_X_axis_enum :Br_range = Br_range.TMAG5170_NotSelected,
                  Br_Y_axis_enum :Br_range = Br_range.TMAG5170_NotSelected,
-                 Br_Z_axis_enum :Br_range = Br_range.TMAG5170_NotSelected):
+                 Br_Z_axis_enum :Br_range = Br_range.TMAG5170_NotSelected,
+                 TempAngleConvEn:Temp_Angle_Conv = Temp_Angle_Conv.enabled):
         self.__Tmag5170_register_mapping = {
             0x00: self.__tmag5170_mapping_type("DEVICE_CONFIG"    ,    self.__DEVICE_CONFIG_DecodingFunction)     ,
             0x01: self.__tmag5170_mapping_type("SENSOR_CONFIG"    ,    self.__SENSOR_CONFIG_DecodingFunction)     ,
@@ -142,6 +147,7 @@ class tmga5170_frame_decoder:
         self.Br_X_axis_enum = Br_X_axis_enum
         self.Br_Y_axis_enum = Br_Y_axis_enum
         self.Br_Z_axis_enum = Br_Z_axis_enum
+        self.TempAngleConvEn = TempAngleConvEn
     @staticmethod 
     def __MAG_OFFSET_CONFIG_DecodingFunction(data: int):
         OFFSET_SELECTION_15_14 = get_masked_value(data, 14,    0x0003)
@@ -330,10 +336,13 @@ f"[15-14] RESERVED: {int_to_hex_string(RESERVED_15_14)}, \
 
         T_HI_THRESHOLD_15_8 = uint8_to_int8(get_masked_value(data, 8, 0xFF))
         T_LO_THRESHOLD_7_0  = uint8_to_int8(get_masked_value(data, 0, 0xFF))
-        threshold_si = tmga5170_frame_decoder.convert_temparature_threshold_to_celsius(T_HI_THRESHOLD_15_8, DEFAULT_VALUE_HI_THR, DEFAULT_VALUE_HI_THR_TEMP)
-        hi_threshold_str = tmga5170_frame_decoder.get_temperature_str(threshold_si)
-        threshold_si = tmga5170_frame_decoder.convert_temparature_threshold_to_celsius(T_LO_THRESHOLD_7_0, DEFAULT_VALUE_LO_THR, DEFAULT_VALUE_LO_THR_TEMP)
-        lo_threshold_str = tmga5170_frame_decoder.get_temperature_str(threshold_si)
+        hi_threshold_str = ""
+        lo_threshold_str = ""
+        if self.TempAngleConvEn == tmga5170_frame_decoder.Temp_Angle_Conv.enabled:
+            threshold_si = tmga5170_frame_decoder.convert_temparature_threshold_to_celsius(T_HI_THRESHOLD_15_8, DEFAULT_VALUE_HI_THR, DEFAULT_VALUE_HI_THR_TEMP)
+            hi_threshold_str = tmga5170_frame_decoder.get_temperature_str(threshold_si)
+            threshold_si = tmga5170_frame_decoder.convert_temparature_threshold_to_celsius(T_LO_THRESHOLD_7_0, DEFAULT_VALUE_LO_THR, DEFAULT_VALUE_LO_THR_TEMP)
+            lo_threshold_str = tmga5170_frame_decoder.get_temperature_str(threshold_si)
         return f"[15-8] T_HI_THRESHOLD: {T_HI_THRESHOLD_15_8} {hi_threshold_str}, [7-0] T_LO_THRESHOLD: {T_LO_THRESHOLD_7_0} {lo_threshold_str}"
 
     @staticmethod
@@ -404,10 +413,11 @@ f"[15-14] RESERVED: {int_to_hex_string(RESERVED_15_14)}, \
 
         return temperature_str
 
-    @staticmethod
-    def __TEMP_RESULT_DecodingFunction(data: int):
+    def __TEMP_RESULT_DecodingFunction(self, data: int):
         temperature = tmga5170_frame_decoder.convert_raw_temp_to_celsius(data, tmga5170_frame_decoder.DataType.default_32bit_access)
-        temperature_str = tmga5170_frame_decoder.get_temperature_str(temperature)
+        temperature_str = ""
+        if self.TempAngleConvEn == tmga5170_frame_decoder.Temp_Angle_Conv.enabled:
+            temperature_str = tmga5170_frame_decoder.get_temperature_str(temperature)
         return f"[15-0] TEMP_RESULT: {data} {temperature_str}"
 
     @staticmethod
@@ -489,10 +499,11 @@ f"[15] ALRT_LVL: {int_to_hex_string(ALRT_LVL_15)}, \
 
         return angle_str
 
-    @staticmethod
-    def __ANGLE_RESULT_DecodingFunction(data: int):
+    def __ANGLE_RESULT_DecodingFunction(self, data: int):
         angle = tmga5170_frame_decoder.convert_raw_angle_to_deg(data, tmga5170_frame_decoder.DataType.default_32bit_access)
-        angle_str = tmga5170_frame_decoder.get_angle_str(angle)
+        angle_str = ""
+        if self.TempAngleConvEn == tmga5170_frame_decoder.Temp_Angle_Conv.enabled:
+            angle_str = tmga5170_frame_decoder.get_angle_str(angle)
         return f"[15-0] ANGLE_RESULT: {data} {angle_str}"
 
     @staticmethod
@@ -807,7 +818,14 @@ class Hla(HighLevelAnalyzer):
 
     TEMPERATURE_ANGLE_CONVERSION_ENABLED = "Temperature and Angle conversion to SI unit ENABLED"
     TEMPERATURE_ANGLE_CONVERSION_DISABLED = "Temperature and Angle conversion to SI unit DISABLED"
-    Disable_Temperature_Angle_Conversion = ChoicesSetting(choices=(TEMPERATURE_ANGLE_CONVERSION_ENABLED,TEMPERATURE_ANGLE_CONVERSION_DISABLED))
+
+    str_temp_angle_conv_mapping = { 
+        TEMPERATURE_ANGLE_CONVERSION_ENABLED:  tmga5170_frame_decoder.Temp_Angle_Conv.enabled ,
+        TEMPERATURE_ANGLE_CONVERSION_DISABLED: tmga5170_frame_decoder.Temp_Angle_Conv.disabled ,
+        }
+
+
+    Temperature_Angle_Conversion = ChoicesSetting(choices=(TEMPERATURE_ANGLE_CONVERSION_ENABLED,TEMPERATURE_ANGLE_CONVERSION_DISABLED))
 
     A1_50MT = "±50mT (TMAG5170A1)"
     A1_25MT = "±25mT (TMAG5170A1)"
@@ -882,7 +900,8 @@ class Hla(HighLevelAnalyzer):
         self.decoder = tmga5170_frame_decoder(data_type = self.str_data_type_mapping[self.DATA_TYPE], 
                                               Br_X_axis_enum = self.str_range_mapping[self.X_RANGE], 
                                               Br_Y_axis_enum = self.str_range_mapping[self.Y_RANGE], 
-                                              Br_Z_axis_enum = self.str_range_mapping[self.Z_RANGE])
+                                              Br_Z_axis_enum = self.str_range_mapping[self.Z_RANGE],
+                                              TempAngleConvEn = self.str_temp_angle_conv_mapping[self.Temperature_Angle_Conversion])
 
         self.frame_data_MISO = bytearray(b'')
         self.frame_data_MOSI = bytearray(b'')

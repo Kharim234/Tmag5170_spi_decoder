@@ -1,6 +1,6 @@
 import unittest
 
-from tmag5170 import tmga5170_frame_decoder
+from tmag5170 import tmga5170_frame_decoder, uint16_to_int16
 
 
 
@@ -120,6 +120,12 @@ class TestDecoder(unittest.TestCase):
         self.assertEqual(result, "[-100.00 Celsius]")
         result = self.decoder.get_temperature_str(None)
         self.assertEqual(result, "")
+
+    def test_uint16_to_int16(self):
+        result = uint16_to_int16(0x7FF0)
+        self.assertEqual(result, 32752)
+        result = uint16_to_int16(0xFFF0)
+        self.assertEqual(result, -16)
 
 
     def tearDown(self):
